@@ -1,0 +1,57 @@
+@import 'tailwindcss';
+
+@source '../views';
+
+/* TALLSTACK UI */
+@import '../../vendor/tallstackui/tallstackui/css/v4.css';
+@plugin '@tailwindcss/forms';
+@source '../../vendor/tallstackui/tallstackui/**/*.php';
+
+/* POWERGRID IMPORTS */
+@import '../../vendor/power-components/livewire-powergrid/resources/css/tailwind4.css';
+
+/** enable dark mode */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@source '../../app/Livewire/*Table.php';
+@source '../../app/Livewire/**/*Table.php';
+@source '../../vendor/power-components/livewire-powergrid/src/Themes/Tailwind.php';
+@source '../../vendor/power-components/livewire-powergrid/resources/views/**/*.php';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+
+@theme {
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+
+    /* TALLSTACK CUSTOM THEME */
+    --color-primary-50: #f1f9f1;
+    --color-primary-100: #dff2e0;
+    --color-primary-200: #c0e4c2;
+    --color-primary-300: #93ce97;
+    --color-primary-400: #62b368;
+
+    /* Lighter, modern UI green */
+    --color-primary-500: #3e9645;
+
+    --color-primary-600: #2e7834;
+    --color-primary-700: #255f2a;
+
+    /* Official CvSU Dark Green */
+    --color-primary-800: #1b651b;
+
+    --color-primary-900: #184a19;
+    --color-primary-950: #0d290e;
+
+    /* POWERGRID THEMES */
+    --color-pg-primary-50: oklch(0.985 0 0);
+    --color-pg-primary-100: oklch(0.97 0 0);
+    --color-pg-primary-200: oklch(0.922 0 0);
+    --color-pg-primary-300: oklch(0.87 0 0);
+    --color-pg-primary-400: oklch(0.708 0 0);
+    --color-pg-primary-500: oklch(0.556 0 0);
+    --color-pg-primary-600: oklch(0.439 0 0);
+    --color-pg-primary-700: oklch(0.371 0 0);
+    --color-pg-primary-800: oklch(0.269 0 0);
+    --color-pg-primary-900: oklch(0.205 0 0);
+    --color-pg-primary-950: oklch(0.145 0 0);
+}
