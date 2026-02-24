@@ -10,8 +10,8 @@ return [
     | PowerGrid supports Tailwind and Bootstrap 5 themes.
     | Configure here the theme of your choice.
     */
-
-    'theme' => \PowerComponents\LivewirePowerGrid\Themes\Tailwind::class,
+    'theme' => \App\PowerGridThemes\Minimalist::class,
+    // 'theme' => \PowerComponents\LivewirePowerGrid\Themes\Tailwind::class,
     // 'theme' => \PowerComponents\LivewirePowerGrid\Themes\DaisyUI::class,
     // 'theme' => \PowerComponents\LivewirePowerGrid\Themes\Bootstrap5::class,
 

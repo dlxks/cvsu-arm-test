@@ -18,4 +18,4 @@ Route::post('/logout', [GoogleAuthController::class, 'logout'])
     ->name('logout');
 
 require __DIR__.'/admin.php';
-// require __DIR__.'/faculty.php';
+require __DIR__.'/faculty.php';

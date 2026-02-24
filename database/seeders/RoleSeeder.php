@@ -11,8 +11,10 @@ class RoleSeeder extends Seeder
     public function run(): void
     {
         // Ensure Roles Exist
-        $adminRole = Role::firstOrCreate(['name' => 'admin']);
+        $superAdminRole = Role::firstOrCreate(['name' => 'superAdmin']);
         $facultyRole = Role::firstOrCreate(['name' => 'faculty']);
+        $collegeAdmin = Role::firstOrCreate(['name' => 'collegeAdmin']);
+        $deptAdmin = Role::firstOrCreate(['name' => 'deptAdmin']);
 
         // Create/Update Specific Admin
         $admin = User::updateOrCreate(
@@ -23,7 +25,7 @@ class RoleSeeder extends Seeder
                 'password' => bcrypt('password'),
             ]
         );
-        $admin->assignRole($adminRole);
+        $admin->assignRole($superAdminRole);
 
         // Create/Update Specific Faculty
         $facultyUser = User::updateOrCreate(

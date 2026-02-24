@@ -18,39 +18,105 @@
 
 <body class="font-sans antialiased" x-cloak x-data="{ name: @js(auth()->user()->name) }"
     x-on:name-updated.window="name = $event.detail.name"
-    x-bind:class="{ 'dark bg-gray-800': darkTheme, 'bg-gray-100': !darkTheme }">
-    <x-ts-layout>
+    x-bind:class="{ 'dark bg-gray-800': darkTheme, 'bg-gray-50': !darkTheme }">
+
+    {{-- MAIN LAYOUT --}}
+    <x-layout>
+        {{-- DASHBOARD HEADER SLOT --}}
         <x-slot:top>
-            <x-ts-dialog />
-            <x-ts-toast />
+            <x-dialog />
+            <x-toast />
         </x-slot:top>
-
         <x-slot:header>
-            <x-slot:left>
-                <x-ts-theme-switch />
-            </x-slot:left>
-            <x-slot:right>
-                <x-ts-dropdown>
-                    <x-slot:action>
-                        <div>
-                            <button class="cursor-pointer" x-on:click="show = !show">
-                                <span class="text-base font-semibold text-primary-500" x-text="name"></span>
-                            </button>
-                        </div>
-                    </x-slot:action>
-                    <form method="POST" action="{{ route('logout') }}">
-                        @csrf
-                        {{--
-                        <x-ts-dropdown.items :text="__('Profile')" :href="route('user.profile')" /> --}}
-                        <x-ts-dropdown.items :text="__('Logout')"
-                            onclick="event.preventDefault(); this.closest('form').submit();" separator />
-                    </form>
-                </x-ts-dropdown>
-            </x-slot:right>
-        </x-slot:header>
-    </x-ts-layout>
+            <x-layout.header>
+                <x-slot:left>
+                    <x-theme-switch />
+                </x-slot:left>
+                <x-slot:right>
+                    <x-dropdown>
+                        <x-slot:action class="flex items-center justify-center">
+                            {{-- The Avatar serves as the visual trigger --}}
+                            {{--
+                            <x-avatar sm background="3aa13a " color="fff" :model="auth()->user()"
+                                x-on:click="show = !show" class="cursor-pointer border-2 border-emerald-600" /> --}}
 
-    {{ $slot }}
+                            <button x-on:click="show = !show"
+                                class="flex items-center gap-2 px-2 py-1 transition-opacity cursor-pointer hover:opacity-80 focus:outline-none">
+
+                                {{-- Show name on larger screens --}}
+                                <span class="hidden text-sm font-bold md:block text-zinc-700 dark:text-zinc-200"
+                                    x-text="name"></span>
+
+                                {{-- The Avatar serves as the visual trigger --}}
+                                <x-avatar sm background="3aa13a " color="fff" :model="auth()->user()"
+                                    class="cursor-pointer border-2 border-emerald-600" />
+
+                                {{--
+                                <x-icon name="chevron-down" class="w-4 h-4 text-zinc-400" /> --}}
+                            </button>
+                        </x-slot:action>
+
+                        <x-dropdown.items icon="user-circle" text="My Profile" />
+
+                        {{-- Logout Button --}}
+                        <form method="POST" action="{{ route('logout') }}">
+                            @csrf
+                            <x-dropdown.items icon="arrow-left-on-rectangle" :text="__('Logout')"
+                                onclick="event.preventDefault(); this.closest('form').submit();" separator />
+                        </form>
+                    </x-dropdown>
+                </x-slot:right>
+            </x-layout.header>
+        </x-slot:header>
+
+        {{-- DASHBOARD SIDEBAR SLOT --}}
+        <x-slot:menu>
+            <x-side-bar collapsible>
+                <x-slot:brand>
+                    <div class="mt-8 flex items-center justify-center">
+                        <img src="{{ asset('/images/cvsu-logo.png') }}" class="w-10" />
+                    </div>
+                </x-slot:brand>
+
+                {{-- Dashboard Menu --}}
+                <x-side-bar.item text="Dashboard" icon="home" :current="request()->routeIs('admin.dashboard')"
+                    :route="route('admin.dashboard')" />
+
+                {{-- Teaching Menu List --}}
+                <x-side-bar.item text="Teaching" opened>
+                    <x-side-bar.item text="Schedules & Subjects" icon="clipboard-document-list" />
+                    <x-side-bar.item text="Grades" icon="check-badge" />
+                    <x-side-bar.item text="Teaching History" icon="academic-cap" />
+                </x-side-bar.item>
+
+                {{-- Research&Extensions Menu List --}}
+                <x-side-bar.item text="Research & Extensions" opened>
+                    <x-side-bar.item text="Researches" icon="book-open" />
+                    <x-side-bar.item text="Extensions" icon="document-text" />
+                </x-side-bar.item>
+
+                {{-- ADMIN NAVIGATION --}}
+                @hasrole('admin')
+                {{-- Campus Management Menu List--}}
+                <x-side-bar.item text="Campus Management" opened>
+                    <x-side-bar.item text="Campuses / Colleges" icon="building-library"
+                        :current="request()->routeIs('admin.branches')" :route="route('admin.branches')" />
+                    <x-side-bar.item text="Departments" icon="briefcase"
+                        :current="request()->routeIs('admin.departments')" :route="route('admin.departments')" />
+                </x-side-bar.item>
+
+                {{-- User Management Menu List--}}
+                <x-side-bar.item text="User Management" opened>
+                    <x-side-bar.item text="Faculty List" icon="identification" />
+                    <x-side-bar.item text="User Accounts" icon="users" />
+                </x-side-bar.item>
+                @endhasrole
+            </x-side-bar>
+        </x-slot:menu>
+
+        {{-- MAIN CONTENTS --}}
+        {{ $slot }}
+    </x-layout>
 
     @livewireScripts
 </body>

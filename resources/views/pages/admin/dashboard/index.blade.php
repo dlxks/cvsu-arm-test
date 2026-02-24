@@ -13,11 +13,6 @@ new #[Layout('layouts.app')] class extends Component
         <h1 class="text-xl font-bold dark:text-white">Admin Dashboard</h1>
 
         <div class="mt-4">
-            <form method="POST" action="{{ route('logout') }}">
-                @csrf
-                <x-ts-button type="submit" flat color="red" class="w-full !justify-start">
-                    Log Out
-                </x-ts-button>
-            </form>
+            Main dashboard content goes here. You can create Livewire components and include them here as needed.
         </div>
     </div>
