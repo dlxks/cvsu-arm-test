@@ -5,49 +5,65 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Request;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
+use Throwable;
 
 class GoogleAuthController extends Controller
 {
     public function redirect()
     {
-        return Socialite::driver('google')->redirect();
+        /** @var GoogleProvider $google */
+        $google = Socialite::driver('google');
+
+        return $google
+            ->with([
+                // 'hd' => ['cvsu.edu.ph'],
+                'prompt' => 'select_account',
+            ])
+            ->redirect();
     }
 
-    public function callback()
+    public function callback(Request $request)
     {
         try {
             $googleUser = Socialite::driver('google')->user();
-            $email = $googleUser->getEmail();
+            $email = Str::lower(trim((string) $googleUser->getEmail()));
 
-            //  Domain Restriction
-            if (! Str::endsWith($email, ['@cvsu.edu.ph', '@gmail.com'])) {
-                return redirect('/')->with('error', 'CvSU - Academic Resource Management can only be used within its organization.');
+            if ($email === '' || ! Str::endsWith($email, ['@cvsu.edu.ph', '@gmail.com'])) {
+                return $this->redirectWithError('Please use an authorized Google account to continue.');
             }
 
-            // Manual User Check
-            $user = User::where('email', $email)->first();
+            $user = User::query()->where('email', $email)->first();
 
             if (! $user) {
-                return redirect('/')->with('error', 'Access denied. You are not registered in the system.');
+                return $this->redirectWithError('Your account must be added by an administrator before you can sign in.');
             }
 
-            // Update & Login
-            $user->update([
-                'google_id' => $googleUser->getId(),
-                'avatar' => $googleUser->getAvatar(),
-            ]);
+            if (! $user->canUseGoogleSignIn()) {
+                return $this->redirectWithError('Your account is inactive. Please contact the administrator.');
+            }
 
-            Auth::login($user);
+            $user->syncGoogleProfile($googleUser->getId(), $googleUser->getAvatar());
 
-            // Role Redirection matching web.php
-            return redirect()->route('dashboard.resolve');
+            Auth::login($user, remember: true);
+            $request->session()->regenerate();
 
-            // Fallback for users with no role
-            return redirect('/')->with('error', 'No role assigned to this account.');
-        } catch (\Exception $e) {
-            return redirect('/')->with('error', 'Authentication failed. Please try again.');
+            $dashboardRoute = $user->dashboardRoute();
+
+            if (! $dashboardRoute || ! Route::has($dashboardRoute)) {
+                Auth::logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+
+                return $this->redirectWithError('Your account does not have an accessible dashboard yet.');
+            }
+
+            return redirect()->route($dashboardRoute);
+        } catch (Throwable $exception) {
+            return $this->redirectWithError('Authentication failed. Please try again.');
         }
     }
 
@@ -56,5 +72,10 @@ class GoogleAuthController extends Controller
         Auth::logout();
 
         return redirect()->route('login');
+    }
+
+    private function redirectWithError(string $message)
+    {
+        return redirect()->route('login')->withErrors(['email' => $message]);
     }
 }

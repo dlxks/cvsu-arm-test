@@ -26,6 +26,7 @@ class User extends Authenticatable
         'email',
         'google_id',
         'avatar',
+        'is_active',
     ];
 
     /**
@@ -85,5 +86,65 @@ class User extends Authenticatable
     public function employeeProfile(): HasOne
     {
         return $this->hasOne(EmployeeProfile::class, 'user_id', 'id');
+    }
+
+    /**
+     * Determine if the user can sign in through Google OAuth.
+     */
+    public function canUseGoogleSignIn(): bool
+    {
+        if ($this->trashed()) {
+            return false;
+        }
+
+        if (! $this->hasAnyRole(['superAdmin', 'collegeAdmin', 'deptAdmin', 'faculty'])) {
+            return false;
+        }
+
+        if ($this->hasRole(['collegeAdmin', 'deptAdmin']) && ! $this->employeeProfile()->exists()) {
+            return false;
+        }
+
+        if ($this->hasRole('faculty') && ! $this->facultyProfile()->exists()) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Persist Google account metadata for the user.
+     */
+    public function syncGoogleProfile(string $googleId, ?string $avatar): void
+    {
+        $this->forceFill([
+            'google_id' => $googleId,
+            'avatar' => $avatar,
+            'email_verified_at' => $this->email_verified_at ?? now(),
+        ])->save();
+    }
+
+    /**
+     * Resolve the highest priority dashboard route for this user.
+     */
+    public function dashboardRoute(): ?string
+    {
+        if ($this->hasRole('superAdmin')) {
+            return 'admin.dashboard';
+        }
+
+        if ($this->hasRole('collegeAdmin') && $this->employeeProfile()->exists()) {
+            return 'college-admin.dashboard';
+        }
+
+        if ($this->hasRole('deptAdmin') && $this->employeeProfile()->exists()) {
+            return 'department-admin.dashboard';
+        }
+
+        if ($this->hasRole('faculty') && $this->facultyProfile()->exists()) {
+            return 'faculty.dashboard';
+        }
+
+        return null;
     }
 }

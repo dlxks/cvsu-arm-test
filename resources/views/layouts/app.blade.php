@@ -70,7 +70,7 @@
 
         {{-- DASHBOARD SIDEBAR SLOT --}}
         <x-slot:menu>
-            <x-side-bar collapsible>
+            <x-side-bar>
                 <x-slot:brand>
                     <div class="mt-8 flex items-center justify-center">
                         <img src="{{ asset('/images/cvsu-logo.png') }}" class="w-10" />
@@ -125,7 +125,7 @@
 
                     {{-- User Management Links --}}
                     <x-side-bar.item text="User Management" opened>
-                        <x-side-bar.item text="Faculty List" icon="identification" :current="request()->routeIs('admin.faculty-profiles', 'admin.faculty-profiles.*')" :route="route('admin.faculty-profiles')"  />
+                        <x-side-bar.item text="Faculty List" icon="identification" :current="request()->routeIs('admin.faculty-profiles', 'admin.faculty-profiles.*')" :route="route('admin.faculty-profiles')" />
                         <x-side-bar.item text="User Accounts" icon="users" :current="request()->routeIs('admin.users', 'admin.users.*')" :route="route('admin.users')" />
                     </x-side-bar.item>
                 @endhasrole

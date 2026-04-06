@@ -27,19 +27,27 @@ class AppServiceProvider extends ServiceProvider
         $this->configureDefaults();
 
         // SIDEBAR STYLE CONFIGURATION
-        TallStackUi::personalize('sidebar.item')
-            ->block('item.state.current', 'group bg-emerald-500/10 dark:bg-emerald-400/10 hover:bg-emerald-500/20 transition-all')
-            ->block('item.state.normal', 'group hover:bg-zinc-200/50 dark:hover:bg-zinc-700/30 transition-all')
-            ->block('item.icon', function (array $data) {
-                return $data['current']
-                    ? 'w-5 text-emerald-700 dark:text-emerald-400'
-                    : 'w-5 text-zinc-500 dark:text-zinc-400 group-hover:text-zinc-700 dark:group-hover:text-zinc-200';
-            })
-            ->block('item.text', function (array $data) {
-                return $data['current']
-                    ? 'text-sm font-bold text-emerald-800 dark:text-emerald-400'
-                    : 'text-sm font-medium text-zinc-600 dark:text-zinc-400 group-hover:text-zinc-800 dark:group-hover:text-zinc-200';
-            });
+        TallStackUi::customize('sidebar.item')
+            // Active routes use primary tones.
+            ->block('item.state.current')
+            ->replace([
+                'text-primary-500' => 'text-primary-600',
+                'dark:text-white' => 'dark:text-primary-400',
+            ])
+
+            // Inactive routes use zinc tones.
+            ->block('item.state.normal')
+            ->replace([
+                'text-primary-500' => 'text-zinc-500',
+                'dark:text-white' => 'dark:text-zinc-300',
+            ])
+
+            // Icons inherit the current route state color.
+            ->block('item.icon')
+            ->replace([
+                'text-primary-500' => 'text-current',
+                'dark:text-white' => 'dark:text-current',
+            ]);
     }
 
     /**

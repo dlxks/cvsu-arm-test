@@ -2,8 +2,7 @@
 
 use Livewire\Component;
 
-new class extends Component
-{
+new class extends Component {
     //
 };
 ?>
@@ -21,11 +20,33 @@ new class extends Component
     <div
         class="w-full max-w-sm px-8 py-6 bg-white rounded-xl shadow-lg border border-zinc-200 dark:bg-zinc-800 dark:border-zinc-700">
         <div class="space-y-4 flex flex-col items-center justify-center">
+            @if ($errors->any())
+                <div
+                    class="bg-red-50 border border-red-200 dark:bg-red-900/20 dark:border-red-800 text-red-800 dark:text-red-200 p-4 rounded-lg">
+                    <div class="flex items-start">
+                        <svg class="w-5 h-5 text-red-400 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd"
+                                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                                clip-rule="evenodd"></path>
+                        </svg>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-medium">Authentication failed</h3>
+                            <ul class="mt-2 list-disc list-inside space-y-1 text-sm">
+                                @foreach ($errors->all() as $error)
+                                    <li>{{ $error }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            @endif
+
             <p class="text-sm text-zinc-500 text-center">Faculty & Admin Use Only</p>
 
             <x-button href="{{ route('google.redirect') }}" sm outline color="primary"
                 class="px-4 bg-zinc-100 font-semibold text-md w-full">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+                    xmlns="http://www.w3.org/2000/svg">
                     <path
                         d="M23.06 12.25C23.06 11.47 22.99 10.72 22.86 10H12.5V14.26H18.42C18.16 15.63 17.38 16.79 16.21 17.57V20.34H19.78C21.86 18.42 23.06 15.6 23.06 12.25Z"
                         fill="#4285F4" />

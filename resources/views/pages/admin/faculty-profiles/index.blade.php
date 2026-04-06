@@ -85,8 +85,6 @@ new class extends Component {
 ?>
 
 <div class="max-w-7xl mx-auto py-8">
-    <x-toast />
-    <x-dialog />
 
     <div class="mb-6 flex justify-between items-center">
         <h1 class="text-xl font-bold dark:text-white">Faculty Profiles</h1>

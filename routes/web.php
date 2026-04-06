@@ -9,7 +9,6 @@ use Illuminate\Support\Facades\Route;
 | GUEST ROUTES
 |--------------------------------------------------------------------------
 */
-
 Route::middleware('guests')->group(function () {
     Route::view('/', 'auth.login')->name('login');
     Route::redirect('/login', '/');
@@ -26,29 +25,22 @@ Route::middleware('guests')->group(function () {
 |--------------------------------------------------------------------------
 */
 Route::middleware('auth')->get('/dashboard', function () {
-    if (Auth::user()->hasRole('superAdmin')) {
-        return redirect()->route('admin.dashboard');
-    }
+    $dashboardRoute = Auth::user()?->dashboardRoute();
 
-    if (Auth::user()->hasRole('collegeAdmin')) {
-        return redirect()->route('college-admin.dashboard');
-    }
+    abort_unless($dashboardRoute && Route::has($dashboardRoute), 403, 'You do not have a valid role assigned.');
 
-    if (Auth::user()->hasRole('deptAdmin')) {
-        return redirect()->route('department-admin.dashboard');
-    }
-
-    if (Auth::user()->hasRole('faculty')) {
-        return redirect()->route('faculty.dashboard');
-    }
-
-    abort(403, 'You do not have a valid role assigned.');
+    return redirect()->route($dashboardRoute);
 })->name('dashboard.resolve');
 
+/*
+|--------------------------------------------------------------------------
+| LOGOUT
+|--------------------------------------------------------------------------
+*/
 Route::post('/logout', [GoogleAuthController::class, 'logout'])
     ->name('logout');
 
-require __DIR__ . '/admin.php';
-require __DIR__ . '/college.php';
-require __DIR__ . '/department.php';
-require __DIR__ . '/faculty.php';
+require __DIR__.'/admin.php';
+require __DIR__.'/college.php';
+require __DIR__.'/department.php';
+require __DIR__.'/faculty.php';
