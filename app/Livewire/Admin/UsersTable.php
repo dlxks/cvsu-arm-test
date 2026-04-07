@@ -8,9 +8,9 @@ use Illuminate\Support\Str;
 use PowerComponents\LivewirePowerGrid\Button;
 use PowerComponents\LivewirePowerGrid\Column;
 use PowerComponents\LivewirePowerGrid\Components\SetUp\Exportable;
-use PowerComponents\LivewirePowerGrid\Components\SetUp\Responsive;
 use PowerComponents\LivewirePowerGrid\Facades\Filter;
 use PowerComponents\LivewirePowerGrid\Facades\PowerGrid;
+use PowerComponents\LivewirePowerGrid\Facades\Rule;
 use PowerComponents\LivewirePowerGrid\PowerGridComponent;
 use PowerComponents\LivewirePowerGrid\PowerGridFields;
 use PowerComponents\LivewirePowerGrid\Traits\WithExport;
@@ -23,12 +23,8 @@ final class UsersTable extends PowerGridComponent
 
     public string $tableName = 'usersTable';
 
-    /**
-     * Override the bood method of PowerGridComponent
-     */
     public function boot(): void
     {
-        // Place filters outside the table header
         config(['livewire-powergrid.filter' => 'outside']);
     }
 
@@ -37,7 +33,6 @@ final class UsersTable extends PowerGridComponent
         $this->showCheckBox();
 
         return [
-            // Set up export options
             PowerGrid::exportable(fileName: 'users-list')
                 ->striped()
                 ->type(Exportable::TYPE_XLS, Exportable::TYPE_CSV),
@@ -49,9 +44,6 @@ final class UsersTable extends PowerGridComponent
             PowerGrid::footer()
                 ->showPerPage()
                 ->showRecordCount(),
-
-            PowerGrid::responsive()
-                ->fixedColumns('name', Responsive::ACTIONS_COLUMN_NAME),
         ];
     }
 
@@ -76,6 +68,7 @@ final class UsersTable extends PowerGridComponent
     {
         return PowerGrid::fields()
             ->add('id')
+            ->add('deleted_at')
             ->add('avatar_view', function ($item) {
                 if (! empty($item->avatar)) {
                     return '<img class="w-8 h-8 shrink-0 grow-0 rounded-full object-cover" src="'.$item->avatar.'" alt="'.$item->name.'">';
@@ -165,30 +158,76 @@ final class UsersTable extends PowerGridComponent
         ];
     }
 
-    public function actions(User $row): array
+    public function actions($row): array
     {
-        $actions = [];
-
-        if (! $row->trashed()) {
-            $actions[] = Button::add('view')
+        return [
+            Button::add('view-user')
                 ->slot('View')
                 ->icon('default-eye', ['class' => 'w-4 h-4 text-primary-500 group-hover:text-primary-700'])
                 ->class('group flex items-center gap-1 text-xs text-primary-500 rounded border border-primary-500 px-2 py-1 hover:text-primary-700 hover:bg-zinc-100 transition-all duration-300 cursor-pointer')
-                ->route('admin.users.show', ['user' => $row->id]);
-
-            $actions[] = Button::add('delete')
+                ->route('admin.users.show', ['user' => $row->id]),
+            Button::add('delete-user')
                 ->slot('Remove')
                 ->icon('default-trash', ['class' => 'w-4 h-4 text-red-500 group-hover:text-red-700'])
                 ->class('group flex items-center gap-1 text-xs text-red-500 rounded border border-red-500 px-2 py-1 hover:text-red-700 hover:bg-zinc-100 transition-all duration-300 cursor-pointer')
-                ->dispatch('confirmDelete', ['id' => $row->id]);
-        } else {
-            $actions[] = Button::add('restore')
+                ->call('confirmDeleteUser', ['id' => $row->id]),
+            Button::add('restore-user')
                 ->slot('Restore')
                 ->icon('default-arrow-path', ['class' => 'w-4 h-4 text-amber-500 group-hover:text-amber-700'])
                 ->class('group flex items-center gap-1 text-xs text-amber-500 rounded border border-amber-500 px-2 py-1 hover:text-amber-700 hover:bg-zinc-100 transition-all duration-300 cursor-pointer')
-                ->dispatch('confirmRestore', ['id' => $row->id]);
+                ->call('confirmRestoreUser', ['id' => $row->id]),
+        ];
+    }
+
+    public function actionRules($row): array
+    {
+        return [
+            Rule::button('view-user')
+                ->when(fn ($row) => $row->trashed())
+                ->hide(),
+
+            Rule::button('delete-user')
+                ->when(fn ($row) => $row->trashed())
+                ->hide(),
+
+            Rule::button('restore-user')
+                ->when(fn ($row) => ! $row->trashed())
+                ->hide(),
+        ];
+    }
+
+    private function isTrashedRow(mixed $row): bool
+    {
+        if (method_exists($row, 'trashed')) {
+            return $row->trashed();
         }
 
-        return $actions;
+        return filled(data_get($row, 'deleted_at'));
+    }
+
+    public function confirmDeleteUser(array $params): void
+    {
+        $userId = (int) $params['id'];
+        $this->dialog()->question('Warning!', 'Are you sure you want to delete this user?')->confirm('Yes, delete', 'deleteUser', $userId)->cancel('Cancel')->send();
+    }
+
+    public function deleteUser($id): void
+    {
+        User::findOrFail($id)->delete();
+        $this->toast()->success('Deleted', 'User moved to trash.')->send();
+        $this->dispatch('pg:eventRefresh-'.$this->tableName);
+    }
+
+    public function confirmRestoreUser(array $params): void
+    {
+        $userId = (int) $params['id'];
+        $this->dialog()->question('Restore?', 'Are you sure you want to restore this user?')->confirm('Yes, restore', 'restoreUser', $userId)->cancel('Cancel')->send();
+    }
+
+    public function restoreUser($id): void
+    {
+        User::withTrashed()->findOrFail($id)->restore();
+        $this->toast()->success('Restored', 'User has been restored.')->send();
+        $this->dispatch('pg:eventRefresh-'.$this->tableName);
     }
 }

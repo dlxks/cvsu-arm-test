@@ -2,12 +2,12 @@
 
 namespace App\Providers;
 
+use App\Support\TallStackUiSetup;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
-use TallStackUi\Facades\TallStackUi;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -26,28 +26,7 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureDefaults();
 
-        // SIDEBAR STYLE CONFIGURATION
-        TallStackUi::customize('sidebar.item')
-            // Active routes use primary tones.
-            ->block('item.state.current')
-            ->replace([
-                'text-primary-500' => 'text-primary-600',
-                'dark:text-white' => 'dark:text-primary-400',
-            ])
-
-            // Inactive routes use zinc tones.
-            ->block('item.state.normal')
-            ->replace([
-                'text-primary-500' => 'text-zinc-500',
-                'dark:text-white' => 'dark:text-zinc-300',
-            ])
-
-            // Icons inherit the current route state color.
-            ->block('item.icon')
-            ->replace([
-                'text-primary-500' => 'text-current',
-                'dark:text-white' => 'dark:text-current',
-            ]);
+        TallStackUiSetup::configureSidebar();
     }
 
     /**

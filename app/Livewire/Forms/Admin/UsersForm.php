@@ -63,7 +63,7 @@ class UsersForm extends Form
     public function store()
     {
         $this->validate();
-        $fullName = trim($this->first_name . ' ' . ($this->middle_name ? $this->middle_name . ' ' : '') . $this->last_name);
+        $fullName = trim($this->first_name.' '.($this->middle_name ? $this->middle_name.' ' : '').$this->last_name);
 
         $user = User::create([
             'name' => $fullName,

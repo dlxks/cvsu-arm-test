@@ -7,18 +7,24 @@ Route::middleware(['auth', 'role:superAdmin'])
     ->name('admin.')
     ->group(function () {
 
-        // Dashboard routes
+        // Dashboard Routes
         Route::livewire('/dashboard', 'pages::admin.dashboard.index')->name('dashboard');
 
-        // Branches routes
+        // Branches Routes
         Route::livewire('/branches', 'pages::admin.branch.index')->name('branches');
         Route::livewire('/branches/{branch}', 'pages::admin.branch.show')->name('branches.show');
 
-        // Users routes
+        // Users Routes
         Route::livewire('/users', 'pages::admin.users.index')->name('users');
         Route::livewire('/users/{user}', 'pages::admin.users.show')->name('users.show');
 
-        // Users routes
+        // Faculty Profile Routes
         Route::livewire('/faculty-profiles', 'pages::admin.faculty-profiles.index')->name('faculty-profiles');
         Route::livewire('/faculty-profiles/{facultyProfile}', 'pages::admin.faculty-profiles.show')->name('faculty-profiles.show');
+
+        // Roles Management Routes
+        Route::livewire('/roles', 'pages::admin.roles.index')->name('roles');
+
+        // Permission Management Routes
+        Route::livewire('/permissions', 'pages::admin.permissions.index')->name('permissions');
     });

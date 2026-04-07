@@ -4,9 +4,7 @@ use App\Imports\UsersImport;
 use App\Livewire\Forms\Admin\UsersForm;
 use App\Models\Branch;
 use App\Models\Department;
-use App\Models\User;
 use Illuminate\Support\Collection;
-use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Maatwebsite\Excel\Facades\Excel;
@@ -17,12 +15,17 @@ new class extends Component {
     use Interactions, WithFileUploads;
 
     public UsersForm $form;
+
     public bool $createModal = false;
+
     public bool $importModal = false;
+
     public $importFile;
 
     public Collection $branches;
+
     public Collection $departments;
+
     public Collection $roles;
 
     public function mount()
@@ -34,7 +37,6 @@ new class extends Component {
 
     public function updatedFormBranchId($branchId)
     {
-        // When Branch changes, fetch departments
         $this->departments = Department::where('branch_id', $branchId)->where('is_active', true)->get();
         $this->form->department_id = null;
     }
@@ -57,34 +59,6 @@ new class extends Component {
         $this->toast()->success('Success', 'Users imported successfully.')->send();
         $this->dispatch('pg:eventRefresh-usersTable');
     }
-
-    #[On('confirmDelete')]
-    public function confirmDelete($id): void
-    {
-        $userId = is_array($id) ? $id['id'] : $id;
-        $this->dialog()->question('Warning!', 'Are you sure you want to delete this user?')->confirm('Yes, delete', 'deleteUser', $userId)->cancel('Cancel')->send();
-    }
-
-    public function deleteUser($id): void
-    {
-        User::findOrFail($id)->delete();
-        $this->toast()->success('Deleted', 'User moved to trash.')->send();
-        $this->dispatch('pg:eventRefresh-usersTable');
-    }
-
-    #[On('confirmRestore')]
-    public function confirmRestore($id): void
-    {
-        $userId = is_array($id) ? $id['id'] : $id;
-        $this->dialog()->question('Restore?', 'Are you sure you want to restore this user?')->confirm('Yes, restore', 'restoreUser', $userId)->cancel('Cancel')->send();
-    }
-
-    public function restoreUser($id): void
-    {
-        User::withTrashed()->findOrFail($id)->restore();
-        $this->toast()->success('Restored', 'User has been restored.')->send();
-        $this->dispatch('pg:eventRefresh-usersTable');
-    }
 };
 ?>
 
@@ -92,7 +66,6 @@ new class extends Component {
     <div class="mb-6 flex justify-between items-center">
         <h1 class="text-xl font-bold dark:text-white">Users Management</h1>
         <div class="flex gap-2">
-
             <x-button wire:click="$set('importModal', true)" sm outline icon="arrow-up-tray" text="Import" />
             <x-button wire:click="$set('createModal', true)" sm color="primary" icon="plus" text="Add User" />
         </div>
@@ -124,9 +97,9 @@ new class extends Component {
                 select="label:label|value:value" />
 
             @if ($departments->isNotEmpty())
-            {{-- Formatted specifically for TallStack UI --}}
-            <x-select.styled label="Department" wire:model="form.department_id" :options="$departments->map(fn($d) => ['label' => $d->name, 'value' => $d->id])->toArray()"
-                select="label:label|value:value" />
+                {{-- Formatted specifically for TallStack UI --}}
+                <x-select.styled label="Department" wire:model="form.department_id" :options="$departments->map(fn($d) => ['label' => $d->name, 'value' => $d->id])->toArray()"
+                    select="label:label|value:value" />
             @endif
         </div>
 
@@ -145,4 +118,5 @@ new class extends Component {
             <x-button color="primary" text="Upload & Import" wire:click="import" wire:loading.attr="disabled" sm />
         </x-slot:footer>
     </x-modal>
+
 </div>

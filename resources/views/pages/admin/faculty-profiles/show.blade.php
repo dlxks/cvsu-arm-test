@@ -120,7 +120,7 @@ new class extends Component {
     }
 }; ?>
 
-<div class="max-w-5xl mx-auto py-8">
+<div class="py-8">
     <x-toast />
     <x-dialog />
 

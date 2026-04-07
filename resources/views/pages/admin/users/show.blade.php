@@ -158,7 +158,7 @@ new class extends Component {
     }
 }; ?>
 
-<div class="max-w-5xl mx-auto py-8">
+<div class="py-8">
     <div class="mb-6 flex justify-between items-center bg-white p-6 rounded-lg shadow dark:bg-zinc-800">
         <div class="flex items-center gap-4">
             <div

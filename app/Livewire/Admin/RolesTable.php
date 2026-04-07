@@ -2,8 +2,11 @@
 
 namespace App\Livewire\Admin;
 
-use App\Models\Department;
+use App\Models\Role;
+use Exception;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Log;
+use Livewire\Attributes\On;
 use PowerComponents\LivewirePowerGrid\Button;
 use PowerComponents\LivewirePowerGrid\Column;
 use PowerComponents\LivewirePowerGrid\Components\SetUp\Exportable;
@@ -14,13 +17,11 @@ use PowerComponents\LivewirePowerGrid\PowerGridFields;
 use PowerComponents\LivewirePowerGrid\Traits\WithExport;
 use TallStackUi\Traits\Interactions;
 
-final class BranchDepartmentsTable extends PowerGridComponent
+final class RolesTable extends PowerGridComponent
 {
     use Interactions, WithExport;
 
-    public int $branchId;
-
-    public string $tableName = 'branchDepartmentsTable';
+    public string $tableName = 'rolesTable';
 
     public function boot(): void
     {
@@ -32,7 +33,7 @@ final class BranchDepartmentsTable extends PowerGridComponent
         $this->showCheckBox();
 
         return [
-            PowerGrid::exportable(fileName: 'departments-list')
+            PowerGrid::exportable(fileName: 'roles-list')
                 ->striped()
                 ->type(Exportable::TYPE_XLS, Exportable::TYPE_CSV),
 
@@ -44,14 +45,13 @@ final class BranchDepartmentsTable extends PowerGridComponent
             PowerGrid::footer()
                 ->showPerPage()
                 ->showRecordCount(),
-
         ];
     }
 
     public function datasource(): Builder
     {
-        return Department::query()
-            ->where('branch_id', $this->branchId)
+        return Role::query()
+            ->with('permissions')
             ->when($this->softDeletes === 'withTrashed', fn ($query) => $query->withTrashed())
             ->when($this->softDeletes === 'onlyTrashed', fn ($query) => $query->onlyTrashed());
     }
@@ -60,22 +60,20 @@ final class BranchDepartmentsTable extends PowerGridComponent
     {
         return PowerGrid::fields()
             ->add('id')
-            ->add('deleted_at')
-            ->add('code')
             ->add('name')
-            ->add('is_active', fn ($row) => $row->is_active ? 'Active' : 'Inactive')
-            ->add('created_at_formatted', fn (Department $model) => $model->created_at->format('d/m/Y'))
-            ->add('status', fn ($row) => $this->isTrashedRow($row) ? 'Deleted' : 'Active');
+            ->add('guard_name')
+            ->add('permissions_list', fn (Role $role) => $role->permissions->pluck('name')->implode(', '))
+            ->add('deleted_at', fn (Role $role) => $role->deleted_at?->format('d/m/Y'));
     }
 
     public function columns(): array
     {
         return [
             Column::make('ID', 'id'),
-            Column::make('Code', 'code')->sortable()->searchable(),
             Column::make('Name', 'name')->sortable()->searchable(),
-            Column::make('Status', 'status')->sortable()->searchable(),
-            Column::make('Created at', 'created_at_formatted', 'created_at')->visibleInExport(false)->sortable(),
+            Column::make('Guard', 'guard_name')->sortable()->searchable(),
+            Column::make('Permissions', 'permissions_list'),
+            Column::make('Deleted At', 'deleted_at')->sortable(),
             Column::action('Action'),
         ];
     }
@@ -83,73 +81,78 @@ final class BranchDepartmentsTable extends PowerGridComponent
     public function actions($row): array
     {
         return [
-            Button::add('edit-department')
+            Button::add('edit-role')
                 ->slot('Edit')
                 ->icon('default-pencil-square', ['class' => 'w-4 h-4 text-blue-500 group-hover:text-blue-700 dark:group-hover:text-blue-400'])
                 ->class('group flex items-center gap-1 text-xs font-bold text-blue-500 rounded border border-blue-500 px-2 py-1 hover:text-blue-700 hover:bg-zinc-100 dark:hover:bg-blue-800 dark:hover:text-blue-400 transition-all duration-300 cursor-pointer')
-                ->dispatch('editDepartment', ['department' => $row->id]),
-            Button::add('delete-department')
+                ->dispatch('openEditModal', ['role' => $row->id]), // Fixed event to match index.blade.php listener
+
+            Button::add('delete-role')
                 ->slot('Remove')
                 ->icon('default-trash', ['class' => 'w-4 h-4 text-red-500 group-hover:text-red-700 dark:group-hover:text-red-400'])
                 ->class('group flex items-center gap-1 text-xs font-bold text-red-500 rounded border border-red-500 px-2 py-1 hover:text-red-700 hover:bg-zinc-100 dark:hover:bg-red-800 dark:hover:text-red-400 transition-all duration-300 cursor-pointer')
-                ->call('confirmDeleteDepartment', ['id' => $row->id]),
-            Button::add('restore-department')
+                ->dispatch('confirmDeleteRole', ['id' => $row->id]),
+
+            Button::add('restore-role')
                 ->slot('Restore')
                 ->icon('default-arrow-path', ['class' => 'w-4 h-4 text-amber-500 group-hover:text-amber-700 dark:group-hover:text-amber-400'])
                 ->class('group flex items-center gap-1 text-xs font-bold text-amber-500 rounded border border-amber-500 px-2 py-1 hover:text-amber-700 hover:bg-zinc-100 dark:hover:bg-amber-800 dark:hover:text-amber-400 transition-all duration-300 cursor-pointer')
-                ->call('confirmRestoreDepartment', ['id' => $row->id]),
+                ->dispatch('confirmRestoreRole', ['id' => $row->id]),
         ];
     }
 
     public function actionRules($row): array
     {
         return [
-            Rule::button('edit-department')
-                ->when(fn ($row) => $row->trashed())
-                ->hide(),
-
-            Rule::button('delete-department')
-                ->when(fn ($row) => $row->trashed())
-                ->hide(),
-
-            Rule::button('restore-department')
-                ->when(fn ($row) => ! $row->trashed())
-                ->hide(),
+            Rule::button('edit-role')->when(fn ($row) => $row->trashed())->hide(),
+            Rule::button('delete-role')->when(fn ($row) => $row->trashed())->hide(),
+            Rule::button('restore-role')->when(fn ($row) => ! $row->trashed())->hide(),
         ];
     }
 
-    private function isTrashedRow(mixed $row): bool
+    #[On('confirmDeleteRole')]
+    public function confirmDeleteRole(int $id): void
     {
-        if (method_exists($row, 'trashed')) {
-            return $row->trashed();
+        $this->dialog()
+            ->question('Warning!', 'Are you sure you want to delete this role?')
+            ->confirm('Yes, delete', 'deleteRole', $id)
+            ->cancel('Cancel')
+            ->send();
+    }
+
+    #[On('deleteRole')]
+    public function deleteRole(int $id): void
+    {
+        try {
+            Role::findOrFail($id)->delete();
+            $this->toast()->success('Deleted', 'Role moved to trash.')->send();
+            $this->dispatch('pg:eventRefresh-'.$this->tableName);
+        } catch (Exception $e) {
+            Log::error('Role Deletion Failed: '.$e->getMessage());
+            $this->toast()->error('Error', 'Failed to delete role. Please try again or contact support.')->send();
         }
-
-        return filled(data_get($row, 'deleted_at'));
     }
 
-    public function confirmDeleteDepartment(array $params): void
+    #[On('confirmRestoreRole')]
+    public function confirmRestoreRole(int $id): void
     {
-        $departmentId = (int) $params['id'];
-        $this->dialog()->question('Warning!', 'Are you sure you want to delete this department?')->confirm('Yes, delete', 'delete', $departmentId)->cancel('Cancel')->send();
+        $this->dialog()
+            ->question('Restore?', 'Are you sure you want to restore this role?')
+            ->confirm('Yes, restore', 'restoreRole', $id)
+            ->cancel('Cancel')
+            ->send();
     }
 
-    public function delete($id): void
+    #[On('restoreRole')]
+    public function restoreRole(int $id): void
     {
-        Department::findOrFail($id)->delete();
-        $this->toast()->success('Deleted', 'Department moved to trash.')->send();
-        $this->dispatch('pg:eventRefresh-'.$this->tableName);
-    }
-
-    public function confirmRestoreDepartment(array $params): void
-    {
-        $departmentId = (int) $params['id'];
-        $this->dialog()->question('Restore?', 'Are you sure you want to restore this department?')->confirm('Yes, restore', 'restore', $departmentId)->cancel('Cancel')->send();
-    }
-
-    public function restore($id): void
-    {
-        Department::withTrashed()->findOrFail($id)->restore();
-        $this->toast()->success('Restored', 'Department has been restored.')->send();
-        $this->dispatch('pg:eventRefresh-'.$this->tableName);
+        try {
+            Role::withTrashed()->findOrFail($id)->restore();
+            $this->toast()->success('Restored', 'Role has been restored.')->send();
+            $this->dispatch('pg:eventRefresh-'.$this->tableName);
+        } catch (Exception $e) {
+            Log::error('Role Restoration Failed: '.$e->getMessage());
+            $this->toast()->error('Error', 'Failed to restore role. Please try again or contact support.')->send();
+        }
     }
 }

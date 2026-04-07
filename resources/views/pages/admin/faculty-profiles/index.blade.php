@@ -4,9 +4,7 @@ use App\Imports\FacultyProfilesImport;
 use App\Livewire\Forms\Admin\FacultyProfileForm;
 use App\Models\Branch;
 use App\Models\Department;
-use App\Models\FacultyProfile;
 use Illuminate\Support\Collection;
-use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Maatwebsite\Excel\Facades\Excel;
@@ -16,11 +14,15 @@ new class extends Component {
     use Interactions, WithFileUploads;
 
     public FacultyProfileForm $form;
+
     public bool $createModal = false;
+
     public bool $importModal = false;
+
     public $importFile;
 
     public Collection $branches;
+
     public Collection $departments;
 
     public function mount()
@@ -53,39 +55,10 @@ new class extends Component {
         $this->toast()->success('Success', 'Faculty imported successfully.')->send();
         $this->dispatch('pg:eventRefresh-facultyProfilesTable');
     }
-
-    #[On('confirmDelete')]
-    public function confirmDelete($id): void
-    {
-        $profileId = is_array($id) ? $id['id'] : $id;
-        $this->dialog()->question('Warning!', 'Are you sure you want to delete this faculty profile?')->confirm('Yes, delete', 'deleteProfile', $profileId)->cancel('Cancel')->send();
-    }
-
-    public function deleteProfile($id): void
-    {
-        FacultyProfile::findOrFail($id)->delete();
-        $this->toast()->success('Deleted', 'Faculty Profile moved to trash.')->send();
-        $this->dispatch('pg:eventRefresh-facultyProfilesTable');
-    }
-
-    #[On('confirmRestore')]
-    public function confirmRestore($id): void
-    {
-        $profileId = is_array($id) ? $id['id'] : $id;
-        $this->dialog()->question('Restore?', 'Are you sure you want to restore this faculty profile?')->confirm('Yes, restore', 'restoreProfile', $profileId)->cancel('Cancel')->send();
-    }
-
-    public function restoreProfile($id): void
-    {
-        FacultyProfile::withTrashed()->findOrFail($id)->restore();
-        $this->toast()->success('Restored', 'Faculty Profile has been restored.')->send();
-        $this->dispatch('pg:eventRefresh-facultyProfilesTable');
-    }
 };
 ?>
 
 <div class="max-w-7xl mx-auto py-8">
-
     <div class="mb-6 flex justify-between items-center">
         <h1 class="text-xl font-bold dark:text-white">Faculty Profiles</h1>
         <div class="flex gap-2">

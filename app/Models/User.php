@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -13,7 +14,7 @@ use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
+    /** @use HasFactory<UserFactory> */
     use HasFactory, HasRoles, Notifiable, SoftDeletes;
 
     /**
@@ -55,24 +56,6 @@ class User extends Authenticatable
     }
 
     /**
-     * Get the user's initials
-     */
-    public function initials(): string
-    {
-        return Str::of($this->name)
-            ->explode(' ')
-            ->take(2)
-            ->map(fn ($word) => Str::substr($word, 0, 1))
-            ->implode('');
-    }
-
-    // Helper to check role
-    public function isSuperAdmin(): bool
-    {
-        return $this->hasRole('superAdmin');
-    }
-
-    /**
      * Relationships declaration
      */
     /**
@@ -89,27 +72,46 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the user's initials
+     */
+    public function initials(): string
+    {
+        return Str::of($this->name)
+            ->explode(' ')
+            ->take(2)
+            ->map(fn ($word) => Str::substr($word, 0, 1))
+            ->implode('');
+    }
+
+    /**
      * Determine if the user can sign in through Google OAuth.
      */
     public function canUseGoogleSignIn(): bool
     {
-        if ($this->trashed()) {
-            return false;
-        }
-
-        if (! $this->hasAnyRole(['superAdmin', 'collegeAdmin', 'deptAdmin', 'faculty'])) {
-            return false;
-        }
-
-        if ($this->hasRole(['collegeAdmin', 'deptAdmin']) && ! $this->employeeProfile()->exists()) {
-            return false;
-        }
-
-        if ($this->hasRole('faculty') && ! $this->facultyProfile()->exists()) {
-            return false;
-        }
+        return $this->is_active && ! $this->trashed();
 
         return true;
+    }
+
+    /**
+     * Resolve the highest priority dashboard route for this user.
+     */
+    public const DASHBOARD_ROUTES = [
+        'superAdmin' => 'admin.dashboard',
+        'collegeAdmin' => 'college-admin.dashboard',
+        'deptAdmin' => 'department-admin.dashboard',
+        'faculty' => 'faculty.dashboard',
+    ];
+
+    public function dashboardRoute(): ?string
+    {
+        foreach (self::DASHBOARD_ROUTES as $role => $route) {
+            if ($this->hasRole($role)) {
+                return $route;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -122,29 +124,5 @@ class User extends Authenticatable
             'avatar' => $avatar,
             'email_verified_at' => $this->email_verified_at ?? now(),
         ])->save();
-    }
-
-    /**
-     * Resolve the highest priority dashboard route for this user.
-     */
-    public function dashboardRoute(): ?string
-    {
-        if ($this->hasRole('superAdmin')) {
-            return 'admin.dashboard';
-        }
-
-        if ($this->hasRole('collegeAdmin') && $this->employeeProfile()->exists()) {
-            return 'college-admin.dashboard';
-        }
-
-        if ($this->hasRole('deptAdmin') && $this->employeeProfile()->exists()) {
-            return 'department-admin.dashboard';
-        }
-
-        if ($this->hasRole('faculty') && $this->facultyProfile()->exists()) {
-            return 'faculty.dashboard';
-        }
-
-        return null;
     }
 }
