@@ -90,8 +90,8 @@
                     {{-- Teaching Links --}}
                     <x-side-bar.item text="Faculty" opened>
                         <x-side-bar.item text="Schedules & Subjects" icon="clipboard-document-list" />
-                        <x-side-bar.item text="Grades" icon="check-badge" />
-                        <x-side-bar.item text="Teaching History" icon="academic-cap" />
+                        {{-- <x-side-bar.item text="Grades" icon="check-badge" />
+                        <x-side-bar.item text="Teaching History" icon="academic-cap" /> --}}
                     </x-side-bar.item>
                 @endhasanyrole
 

@@ -14,9 +14,10 @@ return new class extends Migration
         Schema::create('employee_profiles', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete()->cascadeOnUpdate();
+            $table->string('employee_no')->nullable();
             $table->string('first_name')->nullable();
             $table->string('middle_name')->nullable();
-            $table->string('last_name');
+            $table->string('last_name')->nullable();
             $table->string('position')->nullable();
             $table->foreignId('branch_id')->nullable()->constrained('branches')->cascadeOnUpdate();
             $table->foreignId('department_id')->nullable()->constrained('departments')->cascadeOnUpdate();
