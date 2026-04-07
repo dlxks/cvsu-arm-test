@@ -114,9 +114,9 @@ class BranchSeeder extends Seeder
             ],
             [
                 'code' => 'CvSU-Dasma',
-                'name' => 'CvSU Dasmariñas City Campus',
+                'name' => 'CvSU Dasmarinas City Campus',
                 'type' => 'Satellite',
-                'address' => 'Cavite City, Cavite',
+                'address' => 'Dasmarinas, Cavite',
             ],
             [
                 'code' => 'CvSU-Gen. Tri',
@@ -163,11 +163,14 @@ class BranchSeeder extends Seeder
         ];
 
         foreach ($branches as $branch) {
-            // Use 'code' to check if the branch exists since branch_id is removed
-            Branch::updateOrCreate(
+            $record = Branch::withTrashed()->updateOrCreate(
                 ['code' => $branch['code']],
-                $branch
+                array_merge($branch, ['is_active' => true])
             );
+
+            if ($record->trashed()) {
+                $record->restore();
+            }
         }
     }
 }
