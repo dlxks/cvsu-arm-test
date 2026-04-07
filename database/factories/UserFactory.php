@@ -47,6 +47,14 @@ class UserFactory extends Factory
         });
     }
 
+    public function superAdmin(): static
+    {
+        return $this->afterCreating(function (User $user) {
+            $this->ensureRoleExists('superAdmin');
+            $user->assignRole('superAdmin');
+        });
+    }
+
     public function collegeAdmin(): static
     {
         return $this->afterCreating(function (User $user) {

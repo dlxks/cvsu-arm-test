@@ -24,7 +24,7 @@ class DepartmentFactory extends Factory
 
         return [
             'branch_id' => $branch->id,
-            'code' => strtoupper(fake()->bothify('DEP-###')),
+            'code' => strtoupper(fake()->unique()->bothify('DEP-###')),
             'name' => fake()->randomElement([
                 'Academic Programs Office',
                 'Applied Sciences Department',
