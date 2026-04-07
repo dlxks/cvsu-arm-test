@@ -7,9 +7,9 @@ use Illuminate\Database\Eloquent\Builder;
 use PowerComponents\LivewirePowerGrid\Button;
 use PowerComponents\LivewirePowerGrid\Column;
 use PowerComponents\LivewirePowerGrid\Components\SetUp\Exportable;
-use PowerComponents\LivewirePowerGrid\Components\SetUp\Responsive;
 use PowerComponents\LivewirePowerGrid\Facades\Filter;
 use PowerComponents\LivewirePowerGrid\Facades\PowerGrid;
+use PowerComponents\LivewirePowerGrid\Facades\Rule;
 use PowerComponents\LivewirePowerGrid\PowerGridComponent;
 use PowerComponents\LivewirePowerGrid\PowerGridFields;
 use PowerComponents\LivewirePowerGrid\Traits\WithExport;
@@ -21,12 +21,8 @@ final class BranchesTable extends PowerGridComponent
 
     public string $tableName = 'branchTable';
 
-    /**
-     * Override the bood method of PowerGridComponent
-     */
     public function boot(): void
     {
-        // Place filters outside the table header
         config(['livewire-powergrid.filter' => 'outside']);
     }
 
@@ -35,8 +31,7 @@ final class BranchesTable extends PowerGridComponent
         $this->showCheckBox();
 
         return [
-            // Set up export options
-            PowerGrid::exportable(fileName: 'departments-list')
+            PowerGrid::exportable(fileName: 'branches-list')
                 ->striped()
                 ->type(Exportable::TYPE_XLS, Exportable::TYPE_CSV),
 
@@ -48,18 +43,14 @@ final class BranchesTable extends PowerGridComponent
             PowerGrid::footer()
                 ->showPerPage()
                 ->showRecordCount(),
-
-            // Enable responsive design for the table
-            PowerGrid::responsive()
-                ->fixedColumns('code', Responsive::ACTIONS_COLUMN_NAME),
         ];
     }
 
     public function datasource(): Builder
     {
         return Branch::query()
-            ->when($this->softDeletes === 'withTrashed', fn($query) => $query->withTrashed())
-            ->when($this->softDeletes === 'onlyTrashed', fn($query) => $query->onlyTrashed());
+            ->when($this->softDeletes === 'withTrashed', fn ($query) => $query->withTrashed())
+            ->when($this->softDeletes === 'onlyTrashed', fn ($query) => $query->onlyTrashed());
     }
 
     public function relationSearch(): array
@@ -71,10 +62,11 @@ final class BranchesTable extends PowerGridComponent
     {
         return PowerGrid::fields()
             ->add('id')
+            ->add('deleted_at')
             ->add('code')
-            ->add('code_link', fn(Branch $model) => '<a href="' . route('admin.branches.show', $model->id) . '" class="text-primary-500 hover:text-primary-700 dark:hover:text-primary-400 hover:underline font-medium transition-colors">' . e($model->code) . '</a>')
+            ->add('code_link', fn (Branch $model) => '<a href="'.route('admin.branches.show', $model->id).'" class="text-primary-500 hover:text-primary-700 dark:hover:text-primary-400 hover:underline font-medium transition-colors">'.e($model->code).'</a>')
             ->add('name')
-            ->add('name_link', fn(Branch $model) => '<a href="' . route('admin.branches.show', $model->id) . '" class="text-primary-500 hover:text-primary-700 dark:hover:text-primary-400 hover:underline font-medium transition-colors">' . e($model->name) . '</a>')
+            ->add('name_link', fn (Branch $model) => '<a href="'.route('admin.branches.show', $model->id).'" class="text-primary-500 hover:text-primary-700 dark:hover:text-primary-400 hover:underline font-medium transition-colors">'.e($model->name).'</a>')
             ->add('type')
             ->add('address');
     }
@@ -83,23 +75,10 @@ final class BranchesTable extends PowerGridComponent
     {
         return [
             Column::make('ID', 'id'),
-
-            Column::make('Code', 'code_link', 'code')
-                ->sortable()
-                ->searchable(),
-
-            Column::make('Name', 'name_link', 'name')
-                ->sortable()
-                ->searchable(),
-
-            Column::make('Campus', 'type')
-                ->sortable()
-                ->searchable(),
-
-            Column::make('Address', 'address')
-                ->sortable()
-                ->searchable(),
-
+            Column::make('Code', 'code_link', 'code')->sortable()->searchable(),
+            Column::make('Name', 'name_link', 'name')->sortable()->searchable(),
+            Column::make('Campus', 'type')->sortable()->searchable(),
+            Column::make('Address', 'address')->sortable()->searchable(),
             Column::action('Action'),
         ];
     }
@@ -107,7 +86,6 @@ final class BranchesTable extends PowerGridComponent
     public function filters(): array
     {
         return [
-            // Select Filter for Campus Type
             Filter::select('type', 'type')
                 ->dataSource([
                     ['name' => 'Main', 'id' => 'Main'],
@@ -118,49 +96,81 @@ final class BranchesTable extends PowerGridComponent
         ];
     }
 
-    #[\Livewire\Attributes\On('edit')]
-    public function edit($rowId): void
+    public function actions($row): array
     {
-        $this->js('alert(' . $rowId . ')');
-    }
+        return [Button::add('view-branch')
+            ->slot('View')
+            ->icon('default-eye', ['class' => 'w-4 h-4 text-primary-500 group-hover:text-primary-700 dark:group-hover:text-primary-400'])
+            ->class('group flex items-center gap-1 text-xs font-bold text-primary-500 rounded border border-primary-500 px-2 py-1 hover:text-primary-700 hover:bg-zinc-100 dark:hover:bg-primary-800 dark:hover:text-primary-400 transition-all duration-300 cursor-pointer')
+            ->route('admin.branches.show', ['branch' => $row->id]),
 
-    public function actions(Branch $row): array
-    {
-        $actions = [];
-
-        if (! $row->trashed()) {
-            // Replaced the edit dispatch with a view link
-            $actions[] = Button::add('view')
-                ->slot('View')
-                ->icon('default-eye', ['class' => 'w-4 h-4 text-primary-500 group-hover:text-primary-700 dark:group-hover:text-primary-400'])
-                ->class('group flex items-center gap-1 text-xs font-bold text-primary-500 rounded border border-primary-500 px-2 py-1 hover:text-primary-700 hover:bg-zinc-100 dark:hover:bg-primary-800 dark:hover:text-primary-400 transition-all duration-300 cursor-pointer')
-                ->route('admin.branches.show', ['branch' => $row->id]);
-
-            $actions[] = Button::add('delete')
+            Button::add('delete-branch')
                 ->slot('Remove')
                 ->icon('default-trash', ['class' => 'w-4 h-4 text-red-500 group-hover:text-red-700 dark:group-hover:text-red-400'])
                 ->class('group flex items-center gap-1 text-xs font-bold text-red-500 rounded border border-red-500 px-2 py-1 hover:text-red-700 hover:bg-zinc-100 dark:hover:bg-red-800 dark:hover:text-red-400 transition-all duration-300 cursor-pointer')
-                ->dispatch('confirmDelete', ['id' => $row->id]);
-        } else {
-            $actions[] = Button::add('restore')
+                ->call('confirmDeleteBranch', ['id' => $row->id]),
+
+            Button::add('restore-branch')
                 ->slot('Restore')
                 ->icon('default-arrow-path', ['class' => 'w-4 h-4 text-amber-500 group-hover:text-amber-700 dark:group-hover:text-amber-400'])
                 ->class('group flex items-center gap-1 text-xs font-bold text-amber-500 rounded border border-amber-500 px-2 py-1 hover:text-amber-700 hover:bg-zinc-100 dark:hover:bg-amber-800 dark:hover:text-amber-400 transition-all duration-300 cursor-pointer')
-                ->dispatch('confirmRestore', ['id' => $row->id]);
-        }
+                ->call('confirmRestoreBranch', ['id' => $row->id]),
+        ];
 
-        return $actions;
     }
 
-    /*
     public function actionRules($row): array
     {
-       return [
-            // Hide button edit for ID 1
-            Rule::button('edit')
-                ->when(fn($row) => $row->id === 1)
+        return [
+            Rule::button('view-branch')
+                ->when(fn ($row) => $row->trashed())
+                ->hide(),
+
+            Rule::button('delete-branch')
+                ->when(fn ($row) => $row->trashed())
+                ->hide(),
+
+            Rule::button('restore-branch')
+                ->when(fn ($row) => ! $row->trashed())
                 ->hide(),
         ];
     }
-    */
+
+    private function isTrashedRow(mixed $row): bool
+    {
+        if (method_exists($row, 'trashed')) {
+            return $row->trashed();
+        }
+
+        return filled(data_get($row, 'deleted_at'));
+    }
+
+    /**
+     * Action Functions
+     */
+    public function confirmDeleteBranch(array $params): void
+    {
+        $branchId = (int) $params['id'];
+        $this->dialog()->question('Warning!', 'Are you sure you want to delete this branch?')->confirm('Yes, delete', 'delete', $branchId)->cancel('Cancel')->send();
+    }
+
+    public function delete($id): void
+    {
+        Branch::findOrFail($id)->delete();
+        $this->toast()->success('Deleted', 'Branch moved to trash.')->send();
+        $this->dispatch('pg:eventRefresh-'.$this->tableName);
+    }
+
+    public function confirmRestoreBranch(array $params): void
+    {
+        $branchId = (int) $params['id'];
+        $this->dialog()->question('Restore?', 'Are you sure you want to restore this branch?')->confirm('Yes, restore', 'restore', $branchId)->cancel('Cancel')->send();
+    }
+
+    public function restore($id): void
+    {
+        Branch::withTrashed()->findOrFail($id)->restore();
+        $this->toast()->success('Restored', 'Branch has been restored.')->send();
+        $this->dispatch('pg:eventRefresh-'.$this->tableName);
+    }
 }

@@ -6,6 +6,7 @@
 @import '../../vendor/tallstackui/tallstackui/css/v4.css';
 @plugin '@tailwindcss/forms';
 @source '../../vendor/tallstackui/tallstackui/**/*.php';
+@source '../../app/Providers/*.php';
 
 /* POWERGRID IMPORTS */
 @import '../../vendor/power-components/livewire-powergrid/resources/css/tailwind4.css';

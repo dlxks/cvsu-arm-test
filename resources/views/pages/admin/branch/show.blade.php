@@ -12,15 +12,11 @@ new class extends Component {
     use Interactions;
 
     public Branch $branch;
-
     public BranchForm $form;
-
     public BranchDepartmentForm $departmentForm;
 
     public bool $editModal = false;
-
     public bool $departmentModal = false;
-
     public bool $isEditingDepartment = false;
 
     public function mount(Branch $branch): void
@@ -63,7 +59,6 @@ new class extends Component {
 
     public function saveDepartment(): void
     {
-        // Enforce the branch_id capture before saving
         $this->departmentForm->branch_id = $this->branch->id;
 
         if ($this->isEditingDepartment) {
@@ -77,45 +72,18 @@ new class extends Component {
         $this->departmentModal = false;
         $this->dispatch('pg:eventRefresh-branchDepartmentsTable');
     }
-
-    #[On('confirmDelete')]
-    public function confirmDelete($id): void
-    {
-        $deptId = is_array($id) ? $id['id'] : $id;
-        $this->dialog()->question('Warning!', 'Are you sure you want to delete this department?')->confirm('Yes, delete', 'deleteDepartment', $deptId)->cancel('Cancel')->send();
-    }
-
-    public function deleteDepartment($id): void
-    {
-        Department::findOrFail($id)->delete();
-        $this->toast()->success('Deleted', 'Department moved to trash.')->send();
-        $this->dispatch('pg:eventRefresh-branchDepartmentsTable');
-    }
-
-    #[On('confirmRestore')]
-    public function confirmRestore($id): void
-    {
-        $deptId = is_array($id) ? $id['id'] : $id;
-        $this->dialog()->question('Restore?', 'Are you sure you want to restore this department?')->confirm('Yes, restore', 'restoreDepartment', $deptId)->cancel('Cancel')->send();
-    }
-
-    public function restoreDepartment($id): void
-    {
-        Department::withTrashed()->findOrFail($id)->restore();
-        $this->toast()->success('Restored', 'Department has been restored.')->send();
-        $this->dispatch('pg:eventRefresh-branchDepartmentsTable');
-    }
 };
 ?>
 
 <div class="max-w-7xl mx-auto py-8">
     {{-- Header & Campus Information --}}
     <div
-        class="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-lg shadow dark:bg-gray-800">
+        class="flex flex-col items-start justify-between gap-4 p-6 mb-6 bg-white rounded-lg shadow md:flex-row md:items-center dark:bg-gray-800">
         <div>
             <h1 class="text-2xl font-bold dark:text-white">{{ $branch->code }}</h1>
-            <p class="italic text-zinc-600 dark:text-zinc-200">{{ $branch->name }} </p>
-            <p class="text-gray-600 dark:text-gray-300 mt-1">{{ $branch->type }} Campus | {{ $branch->address }}</p>
+            <p class="italic text-zinc-600 dark:text-zinc-200">{{ $branch->name }}</p>
+            <p class="mt-1 text-gray-600 dark:text-gray-300">{{ $branch->type }} Campus | {{ $branch->address }}</p>
+
             <div class="mt-2">
                 <span
                     class="px-2 py-1 text-xs font-semibold rounded-full {{ $branch->is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
@@ -123,6 +91,7 @@ new class extends Component {
                 </span>
             </div>
         </div>
+
         <div class="flex gap-2">
             <x-button wire:click="edit" sm color="primary" icon="pencil" text="Edit Details" />
             <x-button tag="a" href="{{ route('admin.branches') }}" sm outline text="Back to List" />
@@ -131,12 +100,12 @@ new class extends Component {
 
     {{-- Departments Section --}}
     <div class="mt-8">
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+        <div class="flex flex-col items-start justify-between gap-4 mb-4 md:flex-row md:items-center">
             <h2 class="text-xl font-semibold dark:text-white">Departments</h2>
             <x-button wire:click="createDepartment" sm color="primary" icon="plus" text="New Department" />
         </div>
 
-        <div class="bg-white p-6 rounded-lg shadow dark:bg-gray-800">
+        <div class="p-6 bg-white rounded-lg shadow dark:bg-gray-800">
             {{-- Departments Table --}}
             <livewire:admin.branch-departments-table :branch-id="$branch->id" />
         </div>
