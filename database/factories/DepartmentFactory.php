@@ -2,10 +2,12 @@
 
 namespace Database\Factories;
 
+use App\Models\College;
+use App\Models\Department;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Department>
+ * @extends Factory<Department>
  */
 class DepartmentFactory extends Factory
 {
@@ -16,11 +18,29 @@ class DepartmentFactory extends Factory
      */
     public function definition(): array
     {
+        $college = College::query()->inRandomOrder()->first() ?? College::factory()->create();
+        $departmentName = str(fake()->unique()->words(2, true))->title()->append(' Department')->toString();
+
         return [
-            'branch_id' => \App\Models\Branch::inRandomOrder()->first()->id ?? \App\Models\Branch::factory(),
-            'code' => strtoupper($this->faker->unique()->lexify('D-????')),
-            'name' => $this->faker->words(3, true).' Department',
+            'campus_id' => $college->campus_id,
+            'college_id' => $college->id,
+            'name' => $departmentName,
+            'code' => fake()->unique()->bothify('DEPT-###'),
+            'description' => "Generated seed data for {$departmentName}.",
             'is_active' => true,
         ];
+    }
+
+    public function forCollege(College $college): static
+    {
+        return $this->state(fn (): array => [
+            'campus_id' => $college->campus_id,
+            'college_id' => $college->id,
+        ]);
+    }
+
+    public function inactive(): static
+    {
+        return $this->state(fn (): array => ['is_active' => false]);
     }
 }

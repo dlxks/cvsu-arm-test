@@ -14,10 +14,12 @@ return new class extends Migration
         Schema::create('faculty_profiles', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $table->string('first_name');
+            $table->string('employee_no')->nullable();
+            $table->string('first_name')->nullable();
             $table->string('middle_name')->nullable();
-            $table->string('last_name');
-            $table->foreignId('branch_id')->constrained('branches')->cascadeOnUpdate();
+            $table->string('last_name')->nullable();
+            $table->foreignId('campus_id')->constrained('campuses')->cascadeOnUpdate();
+            $table->foreignId('college_id')->constrained('colleges')->cascadeOnUpdate();
             $table->foreignId('department_id')->constrained('departments')->cascadeOnUpdate();
             $table->string('academic_rank')->nullable();
             $table->string('email')->unique();

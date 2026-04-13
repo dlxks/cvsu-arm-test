@@ -72,7 +72,7 @@
         <x-slot:menu>
             <x-side-bar>
                 <x-slot:brand>
-                    <div class="mt-8 flex items-center justify-center">
+                    <div class="my-4 flex items-center justify-center">
                         <img src="{{ asset('/images/cvsu-logo.png') }}" class="w-10" />
                     </div>
                 </x-slot:brand>
@@ -90,8 +90,8 @@
                     {{-- Teaching Links --}}
                     <x-side-bar.item text="Faculty" opened>
                         <x-side-bar.item text="Schedules & Subjects" icon="clipboard-document-list" />
-                        <x-side-bar.item text="Grades" icon="check-badge" />
-                        <x-side-bar.item text="Teaching History" icon="academic-cap" />
+                        {{-- <x-side-bar.item text="Grades" icon="check-badge" />
+                        <x-side-bar.item text="Teaching History" icon="academic-cap" /> --}}
                     </x-side-bar.item>
                 @endhasanyrole
 
@@ -114,10 +114,9 @@
 
                 {{-- SUPERADMIN ADMIN LINKS --}}
                 @hasanyrole(['superAdmin'])
-                    {{-- Campus Management --}}
-                    <x-side-bar.item text="Campus" opened>
-                        <x-side-bar.item text="Campuses / Colleges" icon="building-library" :current="request()->routeIs('admin.branches', 'admin.branches.*')"
-                            :route="route('admin.branches')" />
+                    {{-- Campuses Links --}}
+                    <x-side-bar.item text="Campuses/Colleges" opened>
+                        <x-side-bar.item text="Campuses" icon="building-library" :current="request()->routeIs('admin.campuses', 'admin.campuses.*')" :route="route('admin.campuses')" />
                     </x-side-bar.item>
 
                     {{-- User Management Links --}}
@@ -131,7 +130,9 @@
         </x-slot:menu>
 
         {{-- MAIN CONTENTS --}}
-        {{ $slot }}
+        <main class="max-w-7xl mx-auto">
+            {{ $slot }}
+        </main>
     </x-layout>
 
     @livewireScripts

@@ -2,9 +2,11 @@
 
 namespace Database\Seeders;
 
-use App\Models\Branch;
+use App\Models\College;
 use App\Models\Department;
+use Database\Seeders\Support\CvsuSeedData;
 use Illuminate\Database\Seeder;
+use RuntimeException;
 
 class DepartmentSeeder extends Seeder
 {
@@ -13,22 +15,34 @@ class DepartmentSeeder extends Seeder
      */
     public function run(): void
     {
-        $mainBranch = Branch::where('type', 'Main')->first() ?? Branch::factory()->create();
+        $colleges = College::query()->get()->keyBy(
+            fn (College $college): string => "{$college->campus_id}:{$college->code}"
+        );
 
-        $departments = [
-            ['code' => 'DIT', 'name' => 'Department of Information Technology'],
-            ['code' => 'DCS', 'name' => 'Department of Computer Science'],
-            ['code' => 'DBIO', 'name' => 'Department of Biology'],
-        ];
+        CvsuSeedData::departments()->each(function (array $department) use ($colleges): void {
+            /** @var College|null $college */
+            $college = $colleges->get("{$department['campus_id']}:{$department['college_code']}");
 
-        foreach ($departments as $dept) {
-            Department::updateOrCreate(
-                ['code' => $dept['code']],
-                array_merge($dept, ['branch_id' => $mainBranch->id])
+            if (! $college) {
+                throw new RuntimeException("Unable to seed department [{$department['code']}] because its college is missing.");
+            }
+
+            $record = Department::withTrashed()->updateOrCreate(
+                [
+                    'college_id' => $college->id,
+                    'code' => $department['code'],
+                ],
+                [
+                    'campus_id' => $college->campus_id,
+                    'name' => $department['name'],
+                    'description' => $department['description'],
+                    'is_active' => true,
+                ]
             );
-        }
 
-        // Generate additional dummy departments
-        Department::factory(10)->create();
+            if ($record->trashed()) {
+                $record->restore();
+            }
+        });
     }
 }
