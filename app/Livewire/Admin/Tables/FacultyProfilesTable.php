@@ -5,6 +5,7 @@ namespace App\Livewire\Admin\Tables;
 use App\Models\FacultyProfile;
 use App\Traits\CanManage;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Auth;
 use PowerComponents\LivewirePowerGrid\Button;
 use PowerComponents\LivewirePowerGrid\Column;
 use PowerComponents\LivewirePowerGrid\Components\SetUp\Exportable;
@@ -44,6 +45,7 @@ final class FacultyProfilesTable extends PowerGridComponent
     {
         return FacultyProfile::query()
             ->with(['user', 'campus', 'college', 'department'])
+            ->where('department_id', $this->departmentId())
             ->when($this->softDeletes === 'withTrashed', fn ($query) => $query->withTrashed())
             ->when($this->softDeletes === 'onlyTrashed', fn ($query) => $query->onlyTrashed());
     }
@@ -154,7 +156,7 @@ final class FacultyProfilesTable extends PowerGridComponent
     {
         $this->ensureCanManage('faculty_profiles.delete');
 
-        FacultyProfile::findOrFail($id)->delete();
+        $this->findManagedProfile((int) $id)->delete();
         $this->toast()->success('Deleted', 'Faculty Profile moved to trash.')->send();
         $this->dispatch('pg:eventRefresh-'.$this->tableName);
     }
@@ -171,8 +173,30 @@ final class FacultyProfilesTable extends PowerGridComponent
     {
         $this->ensureCanManage('faculty_profiles.restore');
 
-        FacultyProfile::withTrashed()->findOrFail($id)->restore();
+        $this->findManagedProfile((int) $id, true)->restore();
         $this->toast()->success('Restored', 'Faculty Profile has been restored.')->send();
         $this->dispatch('pg:eventRefresh-'.$this->tableName);
+    }
+
+    protected function departmentId(): int
+    {
+        $departmentId = Auth::user()?->employeeProfile?->department_id;
+
+        abort_unless(filled($departmentId), 403);
+
+        return (int) $departmentId;
+    }
+
+    protected function findManagedProfile(int $id, bool $includeTrashed = false): FacultyProfile
+    {
+        $query = FacultyProfile::query()
+            ->where('id', $id)
+            ->where('department_id', $this->departmentId());
+
+        if ($includeTrashed) {
+            $query->withTrashed();
+        }
+
+        return $query->firstOrFail();
     }
 }
