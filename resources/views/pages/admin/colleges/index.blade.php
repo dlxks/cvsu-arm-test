@@ -61,7 +61,8 @@ new class extends Component {
         $this->ensureCanManage('campuses.update');
 
         try {
-            $this->form->update();
+            $validated = $this->form->validateForm();
+            $this->campus->update($this->form->payload($validated));
             $this->campus->refresh();
 
             $this->campusModal = false;

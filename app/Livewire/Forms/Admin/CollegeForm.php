@@ -3,15 +3,11 @@
 namespace App\Livewire\Forms\Admin;
 
 use App\Models\College;
-use App\Traits\CanManage;
 use Illuminate\Validation\Rule;
 use Livewire\Form;
-use LogicException;
 
 class CollegeForm extends Form
 {
-    use CanManage;
-
     public ?College $college = null;
 
     public string $code = '';
@@ -31,25 +27,6 @@ class CollegeForm extends Form
         $this->is_active = $college->is_active;
     }
 
-    public function update(): College
-    {
-        $this->ensureCanManage('colleges.update');
-
-        if (! $this->college) {
-            throw new LogicException('Cannot update a college without an active record.');
-        }
-
-        $validated = $this->validateForm();
-
-        $this->college->update($this->payload($validated));
-
-        $college = $this->college->fresh();
-
-        $this->resetForm();
-
-        return $college;
-    }
-
     public function resetForm(): void
     {
         $this->reset(['college', 'code', 'name', 'description']);
@@ -61,7 +38,7 @@ class CollegeForm extends Form
         return $this->validate($this->rules());
     }
 
-    protected function rules(): array
+    public function rules(): array
     {
         return [
             'code' => [
@@ -80,7 +57,7 @@ class CollegeForm extends Form
         ];
     }
 
-    protected function payload(array $validated): array
+    public function payload(array $validated): array
     {
         return [
             'code' => trim($validated['code']),

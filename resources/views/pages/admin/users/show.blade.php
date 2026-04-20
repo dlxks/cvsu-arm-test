@@ -2,19 +2,20 @@
 
 use App\Livewire\Forms\Admin\UsersForm;
 use App\Models\Campus;
-use App\Models\College;
-use App\Models\Department;
+use App\Models\EmployeeProfile;
+use App\Models\FacultyProfile;
 use App\Models\Permission;
 use App\Models\User;
 use App\Traits\CanManage;
+use App\Traits\HasCascadingLocationSelects;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 use Spatie\Permission\Models\Role;
 use TallStackUi\Traits\Interactions;
 
-new class extends Component
-{
-    use CanManage, Interactions;
+new class extends Component {
+    use CanManage, HasCascadingLocationSelects, Interactions;
 
     public User $user;
 
@@ -45,21 +46,6 @@ new class extends Component
         $this->refreshAssignmentOptions();
     }
 
-    public function updatedFormCampusId($value)
-    {
-        $this->colleges = $this->loadCollegesForCampus($value);
-        $this->departments = collect();
-        $this->form->college_id = null;
-        $this->form->department_id = null;
-    }
-
-    public function updatedFormCollegeId($value)
-    {
-        $this->departments = $this->loadDepartmentsForCollege($value);
-        $this->form->department_id = null;
-    }
-
-    // Triggered when switching from Faculty/Employee to Standard to clear out data visually
     public function updatedFormType($value)
     {
         if ($value === 'standard') {
@@ -75,7 +61,7 @@ new class extends Component
     {
         $this->ensureCanManage('users.update');
 
-        if (! $this->isEditing) {
+        if (!$this->isEditing) {
             $this->dialog()->question('Enable Editing?', 'Do you want to modify this user?')->confirm('Yes', 'enableEditing')->send();
 
             return;
@@ -97,7 +83,7 @@ new class extends Component
 
         // Add a warning if they are downgrading a user to "Standard"
         if ($this->form->type === 'standard' && ($this->user->facultyProfile || $this->user->employeeProfile)) {
-            $this->dialog()->warning('Warning!', 'Switching to "Standard" will permanently delete their specific Faculty or Employee records. Continue?')->confirm('Yes, Save Changes', 'save')->send();
+            $this->dialog()->warning('Warning!', 'Switching to "Standard" will permanently delete their specific Faculty or Employee records. Continue?')->confirm('Yes, Save Changes', 'save', 'sm')->send();
 
             return;
         }
@@ -109,32 +95,61 @@ new class extends Component
     {
         $this->ensureCanManage('users.update');
 
-        $this->form->update();
+        $this->form->validateForm();
+
+        DB::transaction(function (): void {
+            $assignment = $this->form->type === 'standard' ? ['campus_id' => null, 'college_id' => null, 'department_id' => null] : $this->form->resolveAcademicAssignment();
+
+            $this->user->update([
+                'name' => $this->form->fullName(),
+                'email' => $this->form->email,
+            ]);
+
+            $this->user->syncRoles($this->form->roles);
+            $this->user->syncPermissions($this->form->resolveDirectPermissions());
+
+            if ($this->form->type === 'standard') {
+                FacultyProfile::where('user_id', $this->user->id)->delete();
+                EmployeeProfile::where('user_id', $this->user->id)->delete();
+
+                return;
+            }
+
+            if ($this->form->type === 'faculty') {
+                EmployeeProfile::where('user_id', $this->user->id)->delete();
+
+                FacultyProfile::updateOrCreate(
+                    ['user_id' => $this->user->id],
+                    array_merge($this->form->profileData(), $assignment, [
+                        'academic_rank' => $this->form->academic_rank,
+                        'contactno' => $this->form->contactno,
+                        'address' => $this->form->address,
+                        'sex' => $this->form->sex,
+                        'birthday' => $this->form->birthday ?: null,
+                    ]),
+                );
+
+                return;
+            }
+
+            FacultyProfile::where('user_id', $this->user->id)->delete();
+
+            EmployeeProfile::updateOrCreate(
+                ['user_id' => $this->user->id],
+                array_merge($assignment, [
+                    'first_name' => $this->form->first_name,
+                    'middle_name' => $this->form->middle_name,
+                    'last_name' => $this->form->last_name,
+                    'position' => $this->form->position,
+                ]),
+            );
+        });
+
         $this->user->refresh()->load(['facultyProfile', 'employeeProfile', 'roles']);
         $this->form->setValues($this->user);
         $this->refreshAssignmentOptions();
         $this->isEditing = false;
         $this->toast()->success('Success', 'User profile updated successfully.')->send();
-    }
-
-    protected function refreshAssignmentOptions(): void
-    {
-        $this->colleges = $this->loadCollegesForCampus($this->form->campus_id);
-        $this->departments = $this->loadDepartmentsForCollege($this->form->college_id);
-    }
-
-    protected function loadCollegesForCampus(?int $campusId): Collection
-    {
-        return filled($campusId)
-            ? College::where('campus_id', $campusId)->where('is_active', true)->orderBy('name')->get()
-            : collect();
-    }
-
-    protected function loadDepartmentsForCollege(?int $collegeId): Collection
-    {
-        return filled($collegeId)
-            ? Department::where('college_id', $collegeId)->where('is_active', true)->orderBy('name')->get()
-            : collect();
     }
 }; ?>
 
@@ -271,7 +286,7 @@ new class extends Component
         @if ($isEditing)
             <div class="mt-8 flex justify-end">
                 @can('users.update')
-                    <x-button wire:click="confirmSave" color="primary" text="Save Changes" />
+                    <x-button wire:click="confirmSave" color="primary" sm text="Save Changes" />
                 @endcan
             </div>
         @endif

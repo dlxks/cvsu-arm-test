@@ -4,7 +4,10 @@ namespace App\Livewire\Admin\Tables;
 
 use App\Models\Program;
 use App\Traits\CanManage;
+use Exception;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Log;
+use Livewire\Attributes\On;
 use PowerComponents\LivewirePowerGrid\Button;
 use PowerComponents\LivewirePowerGrid\Column;
 use PowerComponents\LivewirePowerGrid\Components\SetUp\Exportable;
@@ -14,10 +17,11 @@ use PowerComponents\LivewirePowerGrid\Facades\Rule;
 use PowerComponents\LivewirePowerGrid\PowerGridComponent;
 use PowerComponents\LivewirePowerGrid\PowerGridFields;
 use PowerComponents\LivewirePowerGrid\Traits\WithExport;
+use TallStackUi\Traits\Interactions;
 
 final class ProgramsTable extends PowerGridComponent
 {
-    use CanManage, WithExport;
+    use CanManage, Interactions, WithExport;
 
     public int $collegeId;
 
@@ -179,7 +183,7 @@ final class ProgramsTable extends PowerGridComponent
                 ->slot('Remove')
                 ->icon('default-trash', ['class' => 'w-4 h-4 text-red-500 group-hover:text-red-700 dark:group-hover:text-red-400'])
                 ->class('group flex items-center gap-1 text-xs font-bold text-red-500 rounded border border-red-500 px-2 py-1 hover:text-red-700 hover:bg-zinc-100 dark:hover:bg-red-800 dark:hover:text-red-400 transition-all duration-300 cursor-pointer')
-                ->dispatch('confirmDeleteProgram', ['id' => $row->id]);
+                ->call('confirmDeleteProgram', ['id' => $row->id]);
         }
 
         if ($this->canManage('programs.restore')) {
@@ -187,7 +191,7 @@ final class ProgramsTable extends PowerGridComponent
                 ->slot('Restore')
                 ->icon('default-arrow-path', ['class' => 'w-4 h-4 text-amber-500 group-hover:text-amber-700 dark:group-hover:text-amber-400'])
                 ->class('group flex items-center gap-1 text-xs font-bold text-amber-500 rounded border border-amber-500 px-2 py-1 hover:text-amber-700 hover:bg-zinc-100 dark:hover:bg-amber-800 dark:hover:text-amber-400 transition-all duration-300 cursor-pointer')
-                ->dispatch('confirmRestoreProgram', ['id' => $row->id]);
+                ->call('confirmRestoreProgram', ['id' => $row->id]);
         }
 
         return $actions;
@@ -206,5 +210,79 @@ final class ProgramsTable extends PowerGridComponent
                 ->when(fn ($row) => ! $row->trashed())
                 ->hide(),
         ];
+    }
+
+    #[On('confirmDeleteProgram')]
+    public function confirmDeleteProgram(array $params): void
+    {
+        $this->ensureCanManage('programs.delete');
+
+        $program = $this->findManagedProgram((int) $params['id']);
+        $collegeCount = $program->colleges()->count();
+        $message = 'Are you sure you want to remove '.e($program->code).' - '.e($program->title).' from the offered programs?';
+
+        if ($collegeCount > 1) {
+            $message .= ' This shared program is offered by '.$collegeCount.' colleges and will be moved to trash for all of them.';
+        }
+
+        $this->dialog()
+            ->question('Remove Program?', $message)
+            ->confirm('Yes, remove', 'deleteProgram', $program->id)
+            ->cancel('Cancel')
+            ->send();
+    }
+
+    public function deleteProgram(int $id): void
+    {
+        $this->ensureCanManage('programs.delete');
+
+        try {
+            $this->findManagedProgram($id)->delete();
+            $this->dispatch('pg:eventRefresh-'.$this->tableName);
+            $this->toast()->success('Deleted', 'Program moved to trash.')->send();
+        } catch (Exception $e) {
+            Log::error('Program Deletion Failed: '.$e->getMessage());
+            $this->toast()->error('Error', 'Failed to delete program. Please try again or contact support.')->send();
+        }
+    }
+
+    public function confirmRestoreProgram(array $params): void
+    {
+        $this->ensureCanManage('programs.restore');
+
+        $program = $this->findManagedProgram((int) $params['id'], true);
+
+        $this->dialog()
+            ->question('Restore Program?', 'Are you sure you want to restore '.e($program->code).' - '.e($program->title).'?')
+            ->confirm('Yes, restore', 'restoreProgram', $program->id)
+            ->cancel('Cancel')
+            ->send();
+    }
+
+    public function restoreProgram(int $id): void
+    {
+        $this->ensureCanManage('programs.restore');
+
+        try {
+            $this->findManagedProgram($id, true)->restore();
+            $this->dispatch('pg:eventRefresh-'.$this->tableName);
+            $this->toast()->success('Restored', 'Program has been restored.')->send();
+        } catch (Exception $e) {
+            Log::error('Program Restoration Failed: '.$e->getMessage());
+            $this->toast()->error('Error', 'Failed to restore program. Please try again or contact support.')->send();
+        }
+    }
+
+    protected function findManagedProgram(int $id, bool $includeTrashed = false): Program
+    {
+        $query = Program::query()
+            ->whereKey($id)
+            ->whereHas('colleges', fn ($query) => $query->whereKey($this->collegeId));
+
+        if ($includeTrashed) {
+            $query->withTrashed();
+        }
+
+        return $query->firstOrFail();
     }
 }

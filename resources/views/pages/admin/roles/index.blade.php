@@ -4,6 +4,7 @@ use App\Livewire\Forms\Admin\RolesForm;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Traits\CanManage;
+use Exception;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
@@ -53,8 +54,17 @@ new class extends Component {
         $this->ensureCanManage($this->isEditing ? 'roles.update' : 'roles.create');
 
         try {
+            $validated = $this->form->validateForm();
+            $resolvedPermissions = Permission::query()
+                ->whereIn('id', $validated['permissions'] ?? [])
+                ->get();
+
             if ($this->isEditing) {
-                $this->form->update();
+                $this->form->role->update([
+                    'name' => $validated['name'],
+                    'guard_name' => $validated['guard_name'],
+                ]);
+                $this->form->role->syncPermissions($resolvedPermissions);
                 $this->roleModal = false;
                 $this->dispatch('pg:eventRefresh-rolesTable');
                 $this->toast()->success('Success', 'Role updated successfully.')->send();
@@ -62,7 +72,11 @@ new class extends Component {
                 return;
             }
 
-            $this->form->store();
+            $role = Role::create([
+                'name' => $validated['name'],
+                'guard_name' => $validated['guard_name'],
+            ]);
+            $role->syncPermissions($resolvedPermissions);
             $this->roleModal = false;
             $this->dispatch('pg:eventRefresh-rolesTable');
             $this->toast()->success('Success', 'Role created successfully.')->send();

@@ -3,6 +3,7 @@
 use App\Livewire\Forms\Admin\PermissionsForm;
 use App\Models\Permission;
 use App\Traits\CanManage;
+use Exception;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\On;
@@ -47,8 +48,13 @@ new class extends Component {
         $this->ensureCanManage($this->isEditing ? 'permissions.update' : 'permissions.create');
 
         try {
+            $validated = $this->form->validateForm();
+
             if ($this->isEditing) {
-                $this->form->update();
+                $this->form->permission->update([
+                    'name' => $validated['name'],
+                    'guard_name' => $validated['guard_name'],
+                ]);
                 $this->permissionModal = false;
                 $this->dispatch('pg:eventRefresh-permissionsTable');
                 $this->toast()->success('Success', 'Permission updated successfully.')->send();
@@ -56,7 +62,10 @@ new class extends Component {
                 return;
             }
 
-            $this->form->store();
+            Permission::create([
+                'name' => $validated['name'],
+                'guard_name' => $validated['guard_name'],
+            ]);
             $this->permissionModal = false;
             $this->dispatch('pg:eventRefresh-permissionsTable');
             $this->toast()->success('Success', 'Permission created successfully.')->send();

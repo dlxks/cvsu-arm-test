@@ -3,14 +3,11 @@
 namespace App\Livewire\Forms\Admin;
 
 use App\Models\Department;
-use App\Traits\CanManage;
 use Livewire\Form;
 use LogicException;
 
 class DepartmentForm extends Form
 {
-    use CanManage;
-
     public ?Department $department = null;
 
     public ?int $campus_id = null;
@@ -42,82 +39,6 @@ class DepartmentForm extends Form
         $this->is_active = $department->is_active;
     }
 
-    public function store(): Department
-    {
-        $this->ensureCanManage('departments.create');
-
-        if (! $this->campus_id || ! $this->college_id) {
-            throw new LogicException('Cannot create a department without campus and college context.');
-        }
-
-        $validated = $this->validateForm();
-
-        $department = Department::create($this->payload($validated));
-
-        $this->resetForm($this->campus_id, $this->college_id);
-
-        return $department;
-    }
-
-    public function update(): Department
-    {
-        $this->ensureCanManage('departments.update');
-
-        if (! $this->department) {
-            throw new LogicException('Cannot update a department without an active record.');
-        }
-
-        $this->assertDepartmentMatchesContext($this->department);
-
-        $validated = $this->validateForm();
-
-        $this->department->update($this->payload($validated));
-
-        $department = $this->department->fresh();
-
-        $this->resetForm($validated['campus_id'], $validated['college_id']);
-
-        return $department;
-    }
-
-    public function delete(): Department
-    {
-        $this->ensureCanManage('departments.delete');
-
-        if (! $this->department) {
-            throw new LogicException('Cannot delete a department without an active record.');
-        }
-
-        $this->assertDepartmentMatchesContext($this->department);
-
-        $this->department->delete();
-
-        $department = $this->department->fresh();
-
-        $this->resetForm($this->campus_id, $this->college_id);
-
-        return $department;
-    }
-
-    public function restore(): Department
-    {
-        $this->ensureCanManage('departments.restore');
-
-        if (! $this->department) {
-            throw new LogicException('Cannot restore a department without an active record.');
-        }
-
-        $this->assertDepartmentMatchesContext($this->department);
-
-        $this->department->restore();
-
-        $department = $this->department->fresh();
-
-        $this->resetForm($this->campus_id, $this->college_id);
-
-        return $department;
-    }
-
     public function resetForm(?int $campusId = null, ?int $collegeId = null): void
     {
         $this->reset(['department', 'code', 'name', 'description']);
@@ -131,7 +52,7 @@ class DepartmentForm extends Form
         return $this->validate($this->rules());
     }
 
-    protected function rules(): array
+    public function rules(): array
     {
         return [
             'campus_id' => ['required', 'exists:campuses,id'],
@@ -143,7 +64,7 @@ class DepartmentForm extends Form
         ];
     }
 
-    protected function payload(array $validated): array
+    public function payload(array $validated): array
     {
         return [
             'campus_id' => (int) $validated['campus_id'],
@@ -155,7 +76,7 @@ class DepartmentForm extends Form
         ];
     }
 
-    protected function assertDepartmentMatchesContext(Department $department): void
+    public function assertDepartmentMatchesContext(Department $department): void
     {
         if (! $this->campus_id || ! $this->college_id) {
             throw new LogicException('Cannot manage a department without campus and college context.');

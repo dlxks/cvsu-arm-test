@@ -3,17 +3,19 @@
 use App\Imports\FacultyProfilesImport;
 use App\Livewire\Forms\Admin\FacultyProfileForm;
 use App\Models\Campus;
-use App\Models\College;
-use App\Models\Department;
+use App\Models\FacultyProfile;
+use App\Models\User;
 use App\Traits\CanManage;
+use App\Traits\HasCascadingLocationSelects;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Hash;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Maatwebsite\Excel\Facades\Excel;
 use TallStackUi\Traits\Interactions;
 
 new class extends Component {
-    use CanManage, Interactions, WithFileUploads;
+    use CanManage, Interactions, WithFileUploads, HasCascadingLocationSelects;
 
     public FacultyProfileForm $form;
 
@@ -48,27 +50,41 @@ new class extends Component {
         $this->createModal = true;
     }
 
-    public function updatedFormCampusId($campusId)
-    {
-        $this->colleges = filled($campusId) ? College::where('campus_id', $campusId)->where('is_active', true)->orderBy('name')->get() : collect();
-        $this->departments = collect();
-        $this->form->college_id = null;
-        $this->form->department_id = null;
-    }
-
-    public function updatedFormCollegeId($collegeId)
-    {
-        $this->departments = filled($collegeId) ? Department::where('college_id', $collegeId)->where('is_active', true)->orderBy('name')->get() : collect();
-        $this->form->department_id = null;
-    }
-
     public function save()
     {
         $this->ensureCanManage('faculty_profiles.create');
 
-        $this->form->store();
+        $this->form->validateForm();
+
+        $assignment = $this->form->resolveAcademicAssignment();
+
+        $user = User::create([
+            'name' => $this->form->fullName(),
+            'email' => $this->form->email,
+            'password' => Hash::make('password123'),
+            'email_verified_at' => now(),
+            'is_active' => true,
+        ]);
+
+        $user->assignRole('faculty');
+
+        FacultyProfile::create(
+            array_merge($assignment, [
+                'user_id' => $user->id,
+                'first_name' => $this->form->first_name,
+                'middle_name' => $this->form->middle_name,
+                'last_name' => $this->form->last_name,
+                'email' => $this->form->email,
+                'academic_rank' => $this->form->academic_rank,
+                'contactno' => $this->form->contactno,
+                'sex' => $this->form->sex,
+                'birthday' => $this->form->birthday ?: null,
+                'address' => $this->form->address,
+            ]),
+        );
+
         $this->createModal = false;
-        $this->form->reset();
+        $this->form->resetForm();
         $this->colleges = collect();
         $this->departments = collect();
         $this->toast()->success('Success', 'Faculty Profile created successfully.')->send();

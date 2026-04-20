@@ -4,10 +4,10 @@ namespace App\Livewire\Admin\Tables;
 
 use App\Models\Permission;
 use App\Traits\CanManage;
+use Exception;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
-use Livewire\Attributes\On;
 use PowerComponents\LivewirePowerGrid\Button;
 use PowerComponents\LivewirePowerGrid\Column;
 use PowerComponents\LivewirePowerGrid\Components\SetUp\Exportable;
@@ -93,7 +93,7 @@ final class PermissionsTable extends PowerGridComponent
                 ->slot('Remove')
                 ->icon('default-trash', ['class' => 'w-4 h-4 text-red-500 group-hover:text-red-700 dark:group-hover:text-red-400'])
                 ->class('group flex items-center gap-1 text-xs font-bold text-red-500 rounded border border-red-500 px-2 py-1 hover:text-red-700 hover:bg-zinc-100 dark:hover:bg-red-800 dark:hover:text-red-400 transition-all duration-300 cursor-pointer')
-                ->dispatch('confirmDeletePermission', ['id' => $row->id]);
+                ->call('confirmDeletePermission', ['id' => $row->id]);
         }
 
         if ($this->canManage('permissions.restore')) {
@@ -101,7 +101,7 @@ final class PermissionsTable extends PowerGridComponent
                 ->slot('Restore')
                 ->icon('default-arrow-path', ['class' => 'w-4 h-4 text-amber-500 group-hover:text-amber-700 dark:group-hover:text-amber-400'])
                 ->class('group flex items-center gap-1 text-xs font-bold text-amber-500 rounded border border-amber-500 px-2 py-1 hover:text-amber-700 hover:bg-zinc-100 dark:hover:bg-amber-800 dark:hover:text-amber-400 transition-all duration-300 cursor-pointer')
-                ->dispatch('confirmRestorePermission', ['id' => $row->id]);
+                ->call('confirmRestorePermission', ['id' => $row->id]);
         }
 
         return $actions;
@@ -116,19 +116,19 @@ final class PermissionsTable extends PowerGridComponent
         ];
     }
 
-    #[On('confirmDeletePermission')]
-    public function confirmDeletePermission(int $id): void
+    public function confirmDeletePermission(array $params): void
     {
         $this->ensureCanManage('permissions.delete');
 
+        $permission = Permission::findOrFail((int) $params['id']);
+
         $this->dialog()
-            ->question('Warning', 'Are you sure you want to delete this permission?')
-            ->confirm('Yes, delete', 'deletePermission', $id)
+            ->question('Warning!', 'Are you sure you want to delete '.e($permission->name).'?')
+            ->confirm('Yes, delete', 'deletePermission', $permission->id)
             ->cancel('Cancel')
             ->send();
     }
 
-    #[On('deletePermission')]
     public function deletePermission(int $id): void
     {
         $this->ensureCanManage('permissions.delete');
@@ -137,25 +137,25 @@ final class PermissionsTable extends PowerGridComponent
             Permission::findOrFail($id)->delete();
             $this->toast()->success('Deleted', 'Permission moved to trash.')->send();
             $this->dispatch('pg:eventRefresh-'.$this->tableName);
-        } catch (\Exception $e) {
-            Log::error('Permission deletion failed: '.$e->getMessage());
+        } catch (Exception $e) {
+            Log::error('Permission Deletion Failed: '.$e->getMessage());
             $this->toast()->error('Error', 'Failed to delete permission. Please try again or contact support.')->send();
         }
     }
 
-    #[On('confirmRestorePermission')]
-    public function confirmRestorePermission(int $id): void
+    public function confirmRestorePermission(array $params): void
     {
         $this->ensureCanManage('permissions.restore');
 
+        $permission = Permission::withTrashed()->findOrFail((int) $params['id']);
+
         $this->dialog()
-            ->question('Restore?', 'Are you sure you want to restore this permission?')
-            ->confirm('Yes, restore', 'restorePermission', $id)
+            ->question('Restore?', 'Are you sure you want to restore '.e($permission->name).'?')
+            ->confirm('Yes, restore', 'restorePermission', $permission->id)
             ->cancel('Cancel')
             ->send();
     }
 
-    #[On('restorePermission')]
     public function restorePermission(int $id): void
     {
         $this->ensureCanManage('permissions.restore');
@@ -164,8 +164,8 @@ final class PermissionsTable extends PowerGridComponent
             Permission::withTrashed()->findOrFail($id)->restore();
             $this->toast()->success('Restored', 'Permission has been restored.')->send();
             $this->dispatch('pg:eventRefresh-'.$this->tableName);
-        } catch (\Exception $e) {
-            Log::error('Permission restoration failed: '.$e->getMessage());
+        } catch (Exception $e) {
+            Log::error('Permission Restoration Failed: '.$e->getMessage());
             $this->toast()->error('Error', 'Failed to restore permission. Please try again or contact support.')->send();
         }
     }

@@ -5,8 +5,10 @@ namespace App\Livewire\Admin\Tables;
 use App\Models\FacultyProfile;
 use App\Models\EmployeeProfile;
 use App\Traits\CanManage;
+use Exception;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use PowerComponents\LivewirePowerGrid\Button;
 use PowerComponents\LivewirePowerGrid\Column;
 use PowerComponents\LivewirePowerGrid\Components\SetUp\Exportable;
@@ -156,43 +158,54 @@ final class FacultyProfilesTable extends PowerGridComponent
     {
         $this->ensureCanManage('faculty_profiles.delete');
 
-        $profileId = (int) $params['id'];
-        $this->dialog()->question('Warning!', 'Are you sure you want to delete this faculty profile?')->confirm('Yes, delete', 'deleteProfile', $profileId)->cancel('Cancel')->send();
+        $this->findManagedProfile((int) $params['id']);
+
+        $this->dialog()
+            ->question('Warning!', 'Are you sure you want to delete this faculty profile?')
+            ->confirm('Yes, delete', 'deleteFaculty', (int) $params['id'])
+            ->cancel('Cancel')
+            ->send();
     }
 
-    public function deleteProfile($id): void
+    public function deleteFaculty(int $id): void
     {
         $this->ensureCanManage('faculty_profiles.delete');
 
-        $this->findManagedProfile((int) $id)->delete();
-        $this->toast()->success('Deleted', 'Faculty Profile moved to trash.')->send();
-        $this->dispatch('pg:eventRefresh-'.$this->tableName);
+        try {
+            $this->findManagedProfile($id)->delete();
+            $this->dispatch('pg:eventRefresh-'.$this->tableName);
+            $this->toast()->success('Deleted', 'Faculty Profile moved to trash.')->send();
+        } catch (Exception $e) {
+            Log::error('Faculty Profile Deletion Failed: '.$e->getMessage());
+            $this->toast()->error('Error', 'Failed to delete faculty profile. Please try again or contact support.')->send();
+        }
     }
 
     public function confirmRestoreFaculty(array $params): void
     {
         $this->ensureCanManage('faculty_profiles.restore');
 
-        $profileId = (int) $params['id'];
-        $this->dialog()->question('Restore?', 'Are you sure you want to restore this faculty profile?')->confirm('Yes, restore', 'restoreProfile', $profileId)->cancel('Cancel')->send();
+        $this->findManagedProfile((int) $params['id'], true);
+
+        $this->dialog()
+            ->question('Restore?', 'Are you sure you want to restore this faculty profile?')
+            ->confirm('Yes, restore', 'restoreFaculty', (int) $params['id'])
+            ->cancel('Cancel')
+            ->send();
     }
 
-    public function restoreProfile($id): void
+    public function restoreFaculty(int $id): void
     {
         $this->ensureCanManage('faculty_profiles.restore');
 
-        $this->findManagedProfile((int) $id, true)->restore();
-        $this->toast()->success('Restored', 'Faculty Profile has been restored.')->send();
-        $this->dispatch('pg:eventRefresh-'.$this->tableName);
-    }
-
-    protected function employeeProfile(): EmployeeProfile
-    {
-        $profile = Auth::user()?->employeeProfile;
-
-        abort_unless($profile && filled($profile->college_id), 403);
-
-        return $profile;
+        try {
+            $this->findManagedProfile($id, true)->restore();
+            $this->dispatch('pg:eventRefresh-'.$this->tableName);
+            $this->toast()->success('Restored', 'Faculty Profile has been restored.')->send();
+        } catch (Exception $e) {
+            Log::error('Faculty Profile Restoration Failed: '.$e->getMessage());
+            $this->toast()->error('Error', 'Failed to restore faculty profile. Please try again or contact support.')->send();
+        }
     }
 
     protected function findManagedProfile(int $id, bool $includeTrashed = false): FacultyProfile
@@ -203,8 +216,8 @@ final class FacultyProfilesTable extends PowerGridComponent
             ->where('id', $id)
             ->when(
                 filled($profile->department_id),
-                fn ($query) => $query->where('department_id', $profile->department_id),
-                fn ($query) => $query->where('college_id', $profile->college_id)
+                fn ($q) => $q->where('department_id', $profile->department_id),
+                fn ($q) => $q->where('college_id', $profile->college_id)
             );
 
         if ($includeTrashed) {
@@ -212,5 +225,14 @@ final class FacultyProfilesTable extends PowerGridComponent
         }
 
         return $query->firstOrFail();
+    }
+
+    protected function employeeProfile(): EmployeeProfile
+    {
+        $profile = Auth::user()?->employeeProfile;
+
+        abort_unless($profile && filled($profile->college_id), 403);
+
+        return $profile;
     }
 }

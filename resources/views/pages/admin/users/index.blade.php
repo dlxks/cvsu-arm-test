@@ -3,11 +3,15 @@
 use App\Imports\UsersImport;
 use App\Livewire\Forms\Admin\UsersForm;
 use App\Models\Campus;
-use App\Models\College;
-use App\Models\Department;
+use App\Models\EmployeeProfile;
+use App\Models\FacultyProfile;
 use App\Models\Permission;
+use App\Models\User;
 use App\Traits\CanManage;
+use App\Traits\HasCascadingLocationSelects;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -16,7 +20,7 @@ use Spatie\Permission\Models\Role;
 use TallStackUi\Traits\Interactions;
 
 new class extends Component {
-    use CanManage, Interactions, WithFileUploads;
+    use CanManage, Interactions, WithFileUploads, HasCascadingLocationSelects;
 
     public UsersForm $form;
 
@@ -60,20 +64,6 @@ new class extends Component {
         $this->createModal = true;
     }
 
-    public function updatedFormCampusId($campusId)
-    {
-        $this->colleges = filled($campusId) ? College::where('campus_id', $campusId)->where('is_active', true)->orderBy('name')->get() : collect();
-        $this->departments = collect();
-        $this->form->college_id = null;
-        $this->form->department_id = null;
-    }
-
-    public function updatedFormCollegeId($collegeId)
-    {
-        $this->departments = filled($collegeId) ? Department::where('college_id', $collegeId)->where('is_active', true)->orderBy('name')->get() : collect();
-        $this->form->department_id = null;
-    }
-
     public function updatedFormType($value)
     {
         if ($value === 'standard') {
@@ -89,7 +79,45 @@ new class extends Component {
     {
         $this->ensureCanManage('users.create');
 
-        $this->form->store();
+        $this->form->validateForm();
+
+        DB::transaction(function (): void {
+            $assignment = $this->form->type === 'standard' ? ['campus_id' => null, 'college_id' => null, 'department_id' => null] : $this->form->resolveAcademicAssignment();
+
+            $newUser = User::create([
+                'name' => $this->form->fullName(),
+                'email' => $this->form->email,
+                'password' => Hash::make('password123'),
+                'email_verified_at' => now(),
+                'is_active' => true,
+            ]);
+
+            $newUser->syncRoles($this->form->roles);
+            $newUser->syncPermissions($this->form->resolveDirectPermissions());
+
+            if ($this->form->type === 'faculty') {
+                FacultyProfile::create(
+                    array_merge($assignment, $this->form->profileData(), [
+                        'user_id' => $newUser->id,
+                        'academic_rank' => $this->form->academic_rank,
+                        'contactno' => $this->form->contactno,
+                        'address' => $this->form->address,
+                        'sex' => $this->form->sex,
+                        'birthday' => $this->form->birthday ?: null,
+                    ]),
+                );
+            } elseif ($this->form->type === 'employee') {
+                EmployeeProfile::create(
+                    array_merge($assignment, [
+                        'user_id' => $newUser->id,
+                        'first_name' => $this->form->first_name,
+                        'middle_name' => $this->form->middle_name,
+                        'last_name' => $this->form->last_name,
+                        'position' => $this->form->position,
+                    ]),
+                );
+            }
+        });
 
         $this->createModal = false;
         $this->toast()->success('Success', 'User created successfully.')->send();

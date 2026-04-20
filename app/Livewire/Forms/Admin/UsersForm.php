@@ -4,23 +4,15 @@ namespace App\Livewire\Forms\Admin;
 
 use App\Models\College;
 use App\Models\Department;
-use App\Models\EmployeeProfile;
-use App\Models\FacultyProfile;
 use App\Models\Permission;
 use App\Models\User;
-use App\Traits\CanManage;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Livewire\Form;
 
 class UsersForm extends Form
 {
-    use CanManage;
-
     public ?User $user = null;
 
-    // 1. Added ? to make properties nullable
     public ?string $first_name = '';
 
     public ?string $middle_name = '';
@@ -96,6 +88,11 @@ class UsersForm extends Form
         ];
     }
 
+    public function validateForm(): array
+    {
+        return $this->validate($this->rules());
+    }
+
     public function setValues(User $user)
     {
         $this->user = $user;
@@ -146,83 +143,22 @@ class UsersForm extends Form
         }
     }
 
-    public function store(): void
+    public function resetProfileFields(): void
     {
-        $this->ensureCanManage('users.create');
-
-        $this->validate();
-
-        DB::transaction(function (): void {
-            $fullName = trim($this->first_name.' '.($this->middle_name ? $this->middle_name.' ' : '').$this->last_name);
-            $assignment = $this->resolveAcademicAssignment();
-
-            $newUser = User::create([
-                'name' => $fullName,
-                'email' => $this->email,
-                'password' => Hash::make('password123'),
-                'email_verified_at' => now(),
-                'is_active' => true,
-            ]);
-
-            $newUser->syncRoles($this->roles);
-            $newUser->syncPermissions($this->resolveDirectPermissions());
-
-            if ($this->type === 'faculty') {
-                FacultyProfile::create(array_merge($assignment, [
-                    'user_id' => $newUser->id,
-                    'first_name' => $this->first_name,
-                    'middle_name' => $this->middle_name,
-                    'last_name' => $this->last_name,
-                    'email' => $this->email,
-                    'academic_rank' => $this->academic_rank,
-                    'contactno' => $this->contactno,
-                    'address' => $this->address,
-                    'sex' => $this->sex,
-                    'birthday' => $this->birthday ?: null,
-                ]));
-            } elseif ($this->type === 'employee') {
-                EmployeeProfile::create(array_merge($assignment, [
-                    'user_id' => $newUser->id,
-                    'first_name' => $this->first_name,
-                    'middle_name' => $this->middle_name,
-                    'last_name' => $this->last_name,
-                    'position' => $this->position,
-                ]));
-            }
-        });
+        $this->academic_rank = '';
+        $this->contactno = '';
+        $this->address = '';
+        $this->sex = '';
+        $this->birthday = '';
+        $this->position = '';
     }
 
-    public function update(): void
+    public function fullName(): string
     {
-        $this->ensureCanManage('users.update');
-
-        $this->validate();
-
-        DB::transaction(function (): void {
-            $fullName = trim($this->first_name.' '.($this->middle_name ? $this->middle_name.' ' : '').$this->last_name);
-            $assignment = $this->type === 'standard'
-                ? ['campus_id' => null, 'college_id' => null, 'department_id' => null]
-                : $this->resolveAcademicAssignment();
-
-            $this->syncUserAccount($fullName);
-            $this->user->syncRoles($this->roles);
-            $this->user->syncPermissions($this->resolveDirectPermissions());
-
-            if ($this->type === 'standard') {
-                FacultyProfile::where('user_id', $this->user->id)->delete();
-                EmployeeProfile::where('user_id', $this->user->id)->delete();
-
-                return;
-            }
-
-            $this->syncTypedProfile($assignment);
-        });
+        return trim($this->first_name.' '.($this->middle_name ? $this->middle_name.' ' : '').$this->last_name);
     }
 
-    /**
-     * @return array{campus_id: int, college_id: int, department_id: ?int}
-     */
-    protected function resolveAcademicAssignment(): array
+    public function resolveAcademicAssignment(): array
     {
         if ($this->department_id) {
             $department = Department::query()
@@ -250,7 +186,7 @@ class UsersForm extends Form
         ];
     }
 
-    protected function resolveDirectPermissions()
+    public function resolveDirectPermissions()
     {
         return Permission::query()
             ->where('guard_name', 'web')
@@ -258,57 +194,7 @@ class UsersForm extends Form
             ->get();
     }
 
-    protected function resetProfileFields(): void
-    {
-        $this->academic_rank = '';
-        $this->contactno = '';
-        $this->address = '';
-        $this->sex = '';
-        $this->birthday = '';
-        $this->position = '';
-    }
-
-    protected function syncUserAccount(string $fullName): void
-    {
-        $this->user->update([
-            'name' => $fullName,
-            'email' => $this->email,
-        ]);
-    }
-
-    protected function syncTypedProfile(array $assignment): void
-    {
-        if ($this->type === 'faculty') {
-            EmployeeProfile::where('user_id', $this->user->id)->delete();
-
-            FacultyProfile::updateOrCreate(
-                ['user_id' => $this->user->id],
-                array_merge($this->baseProfileData(), $assignment, [
-                    'academic_rank' => $this->academic_rank,
-                    'contactno' => $this->contactno,
-                    'address' => $this->address,
-                    'sex' => $this->sex,
-                    'birthday' => $this->birthday ?: null,
-                ])
-            );
-
-            return;
-        }
-
-        FacultyProfile::where('user_id', $this->user->id)->delete();
-
-        EmployeeProfile::updateOrCreate(
-            ['user_id' => $this->user->id],
-            array_merge($assignment, [
-                'first_name' => $this->first_name,
-                'middle_name' => $this->middle_name,
-                'last_name' => $this->last_name,
-                'position' => $this->position,
-            ])
-        );
-    }
-
-    protected function baseProfileData(): array
+    public function profileData(): array
     {
         return [
             'first_name' => $this->first_name,
