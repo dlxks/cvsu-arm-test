@@ -47,6 +47,57 @@ class CvsuSeedData
     }
 
     /**
+     * @return Collection<int, array{legacy_id: int, title: string, code: string, description: ?string, no_of_years: int, level: string}>
+     */
+    public static function programs(): Collection
+    {
+        return self::readCsv('programs.csv')->map(
+            fn (array $row): array => [
+                'legacy_id' => (int) $row['id'],
+                'title' => $row['title'],
+                'code' => $row['code'],
+                'description' => self::nullable($row['description'] ?? null),
+                'no_of_years' => (int) $row['no_of_years'],
+                'level' => $row['level'],
+            ]
+        );
+    }
+
+    /**
+     * @return Collection<int, array{legacy_id: int, college_legacy_id: int, program_legacy_id: int, created_at: ?string, updated_at: ?string}>
+     */
+    public static function collegePrograms(): Collection
+    {
+        return self::readCsv('college_programs.csv')->map(
+            fn (array $row): array => [
+                'legacy_id' => (int) $row['id'],
+                'college_legacy_id' => (int) $row['college_id'],
+                'program_legacy_id' => (int) $row['program_id'],
+                'created_at' => self::nullable($row['created_at'] ?? null),
+                'updated_at' => self::nullable($row['updated_at'] ?? null),
+            ]
+        );
+    }
+
+    /**
+     * @return Collection<int, array{legacy_id: int, title: string, code: string, description: ?string, lecture_units: int, laboratory_units: int, is_credit: bool}>
+     */
+    public static function subjects(): Collection
+    {
+        return self::readCsv('subjects.csv')->map(
+            fn (array $row): array => [
+                'legacy_id' => (int) $row['id'],
+                'title' => $row['title'],
+                'code' => $row['code'],
+                'description' => self::nullable($row['description'] ?? null),
+                'lecture_units' => (int) $row['lecture_units'],
+                'laboratory_units' => (int) $row['laboratory_units'],
+                'is_credit' => (bool) $row['is_credit'],
+            ]
+        );
+    }
+
+    /**
      * @return Collection<int, array{campus_id: int, college_code: string, name: string, code: string, description: string}>
      */
     public static function departments(): Collection
