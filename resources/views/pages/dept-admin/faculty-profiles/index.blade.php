@@ -3,17 +3,19 @@
 use App\Imports\FacultyProfilesImport;
 use App\Livewire\Forms\Admin\FacultyProfileForm;
 use App\Models\Campus;
-use App\Models\College;
-use App\Models\Department;
+use App\Models\FacultyProfile;
+use App\Models\User;
 use App\Traits\CanManage;
-use Illuminate\Support\Collection;
+use App\Traits\HasCascadingLocationSelects;
+use Illuminate\Support\Facades\Hash;
+use Livewire\Attributes\Computed;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Maatwebsite\Excel\Facades\Excel;
 use TallStackUi\Traits\Interactions;
 
 new class extends Component {
-    use CanManage, Interactions, WithFileUploads;
+    use CanManage, Interactions, WithFileUploads, HasCascadingLocationSelects;
 
     public FacultyProfileForm $form;
 
@@ -23,19 +25,25 @@ new class extends Component {
 
     public $importFile;
 
-    public Collection $campuses;
+    public array $colleges = [];
 
-    public Collection $colleges;
+    public array $departments = [];
 
-    public Collection $departments;
+    #[Computed]
+    public function campuses()
+    {
+        return Campus::where('is_active', true)->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(fn ($c) => ['label' => $c->name, 'value' => $c->id])
+            ->toArray();
+    }
 
     public function mount()
     {
         $this->ensureCanManage('faculty_profiles.view');
 
-        $this->campuses = Campus::where('is_active', true)->orderBy('name')->get();
-        $this->colleges = collect();
-        $this->departments = collect();
+        $this->colleges = [];
+        $this->departments = [];
     }
 
     public function create()
@@ -43,32 +51,46 @@ new class extends Component {
         $this->ensureCanManage('faculty_profiles.create');
 
         $this->form->reset();
-        $this->colleges = collect();
-        $this->departments = collect();
+        $this->colleges = [];
+        $this->departments = [];
         $this->createModal = true;
-    }
-
-    public function updatedFormCampusId($campusId)
-    {
-        $this->colleges = filled($campusId) ? College::where('campus_id', $campusId)->where('is_active', true)->orderBy('name')->get() : collect();
-        $this->departments = collect();
-        $this->form->college_id = null;
-        $this->form->department_id = null;
-    }
-
-    public function updatedFormCollegeId($collegeId)
-    {
-        $this->departments = filled($collegeId) ? Department::where('college_id', $collegeId)->where('is_active', true)->orderBy('name')->get() : collect();
-        $this->form->department_id = null;
     }
 
     public function save()
     {
         $this->ensureCanManage('faculty_profiles.create');
 
-        $this->form->store();
+        $this->form->validateForm();
+
+        $assignment = $this->form->resolveAcademicAssignment();
+
+        $user = User::create([
+            'name' => $this->form->fullName(),
+            'email' => $this->form->email,
+            'password' => Hash::make('password123'),
+            'email_verified_at' => now(),
+            'is_active' => true,
+        ]);
+
+        $user->assignRole('faculty');
+
+        FacultyProfile::create(
+            array_merge($assignment, [
+                'user_id' => $user->id,
+                'first_name' => $this->form->first_name,
+                'middle_name' => $this->form->middle_name,
+                'last_name' => $this->form->last_name,
+                'email' => $this->form->email,
+                'academic_rank' => $this->form->academic_rank,
+                'contactno' => $this->form->contactno,
+                'sex' => $this->form->sex,
+                'birthday' => $this->form->birthday ?: null,
+                'address' => $this->form->address,
+            ]),
+        );
+
         $this->createModal = false;
-        $this->form->reset();
+        $this->form->resetForm();
         $this->colleges = collect();
         $this->departments = collect();
         $this->toast()->success('Success', 'Faculty Profile created successfully.')->send();
@@ -122,18 +144,14 @@ new class extends Component {
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <x-select.styled label="Campus" wire:model.live="form.campus_id" :options="$campuses->map(fn($campus) => ['label' => $campus->name, 'value' => $campus->id])->toArray()"
+                <x-select.styled label="Campus" wire:model.live="form.campus_id" :options="$this->campuses"
                     select="label:label|value:value" />
 
-                <x-select.styled label="College" wire:model.live="form.college_id" :options="$colleges
-                    ->map(fn($college) => ['label' => $college->name, 'value' => $college->id])
-                    ->toArray()"
+                <x-select.styled label="College" wire:model.live="form.college_id" :options="$colleges"
                     select="label:label|value:value" />
 
-                <x-select.styled label="Department" wire:model="form.department_id" :options="$departments
-                    ->map(fn($department) => ['label' => $department->name, 'value' => $department->id])
-                    ->toArray()"
-                    select="label:label|value:value" :disabled="$colleges->isEmpty()" />
+                <x-select.styled label="Department" wire:model="form.department_id" :options="$departments"
+                    select="label:label|value:value" :disabled="empty($colleges)" />
             </div>
 
             <x-input label="Academic Rank" wire:model="form.academic_rank" />

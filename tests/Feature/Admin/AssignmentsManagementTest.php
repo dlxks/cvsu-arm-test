@@ -43,7 +43,7 @@ describe('assignments management', function () {
 
         Livewire::actingAs($actingUser)
             ->test('pages::admin.users.show', ['user' => $managedUser])
-            ->call('enableEditing')
+            ->call('startEditing')
             ->set('form.direct_permissions', [$permission->name])
             ->call('save')
             ->assertHasNoErrors();

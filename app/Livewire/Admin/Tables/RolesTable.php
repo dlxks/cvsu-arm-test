@@ -7,7 +7,6 @@ use App\Traits\CanManage;
 use Exception;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Log;
-use Livewire\Attributes\On;
 use PowerComponents\LivewirePowerGrid\Button;
 use PowerComponents\LivewirePowerGrid\Column;
 use PowerComponents\LivewirePowerGrid\Components\SetUp\Exportable;
@@ -96,7 +95,7 @@ final class RolesTable extends PowerGridComponent
                 ->slot('Remove')
                 ->icon('default-trash', ['class' => 'w-4 h-4 text-red-500 group-hover:text-red-700 dark:group-hover:text-red-400'])
                 ->class('group flex items-center gap-1 text-xs font-bold text-red-500 rounded border border-red-500 px-2 py-1 hover:text-red-700 hover:bg-zinc-100 dark:hover:bg-red-800 dark:hover:text-red-400 transition-all duration-300 cursor-pointer')
-                ->dispatch('confirmDeleteRole', ['id' => $row->id]);
+                ->call('confirmDeleteRole', ['id' => $row->id]);
         }
 
         if ($this->canManage('roles.restore')) {
@@ -104,7 +103,7 @@ final class RolesTable extends PowerGridComponent
                 ->slot('Restore')
                 ->icon('default-arrow-path', ['class' => 'w-4 h-4 text-amber-500 group-hover:text-amber-700 dark:group-hover:text-amber-400'])
                 ->class('group flex items-center gap-1 text-xs font-bold text-amber-500 rounded border border-amber-500 px-2 py-1 hover:text-amber-700 hover:bg-zinc-100 dark:hover:bg-amber-800 dark:hover:text-amber-400 transition-all duration-300 cursor-pointer')
-                ->dispatch('confirmRestoreRole', ['id' => $row->id]);
+                ->call('confirmRestoreRole', ['id' => $row->id]);
         }
 
         return $actions;
@@ -119,19 +118,19 @@ final class RolesTable extends PowerGridComponent
         ];
     }
 
-    #[On('confirmDeleteRole')]
-    public function confirmDeleteRole(int $id): void
+    public function confirmDeleteRole(array $params): void
     {
         $this->ensureCanManage('roles.delete');
 
+        $role = Role::findOrFail((int) $params['id']);
+
         $this->dialog()
-            ->question('Warning!', 'Are you sure you want to delete this role?')
-            ->confirm('Yes, delete', 'deleteRole', $id)
+            ->question('Warning!', 'Are you sure you want to delete '.e($role->name).'?')
+            ->confirm('Yes, delete', 'deleteRole', $role->id)
             ->cancel('Cancel')
             ->send();
     }
 
-    #[On('deleteRole')]
     public function deleteRole(int $id): void
     {
         $this->ensureCanManage('roles.delete');
@@ -146,19 +145,19 @@ final class RolesTable extends PowerGridComponent
         }
     }
 
-    #[On('confirmRestoreRole')]
-    public function confirmRestoreRole(int $id): void
+    public function confirmRestoreRole(array $params): void
     {
         $this->ensureCanManage('roles.restore');
 
+        $role = Role::withTrashed()->findOrFail((int) $params['id']);
+
         $this->dialog()
-            ->question('Restore?', 'Are you sure you want to restore this role?')
-            ->confirm('Yes, restore', 'restoreRole', $id)
+            ->question('Restore?', 'Are you sure you want to restore '.e($role->name).'?')
+            ->confirm('Yes, restore', 'restoreRole', $role->id)
             ->cancel('Cancel')
             ->send();
     }
 
-    #[On('restoreRole')]
     public function restoreRole(int $id): void
     {
         $this->ensureCanManage('roles.restore');

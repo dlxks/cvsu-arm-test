@@ -3,15 +3,12 @@
 namespace App\Livewire\Forms\Admin;
 
 use App\Models\Room;
-use App\Traits\CanManage;
 use Illuminate\Validation\Rule;
 use Livewire\Form;
 use LogicException;
 
 class RoomForm extends Form
 {
-    use CanManage;
-
     public ?Room $room = null;
 
     public ?int $campus_id = null;
@@ -59,80 +56,6 @@ class RoomForm extends Form
         $this->status = $room->status ?? 'USEABLE';
     }
 
-    public function store(): Room
-    {
-        $this->ensureCanManage('rooms.create');
-
-        $this->assertContext();
-
-        $validated = $this->validateForm();
-
-        $room = Room::create($this->payload($validated));
-
-        $this->resetForm($this->campus_id, $this->college_id, $this->department_id);
-
-        return $room;
-    }
-
-    public function update(): Room
-    {
-        $this->ensureCanManage('rooms.update');
-
-        if (! $this->room) {
-            throw new LogicException('Cannot update a room without an active record.');
-        }
-
-        $this->assertRoomMatchesContext($this->room);
-
-        $validated = $this->validateForm();
-
-        $this->room->update($this->payload($validated));
-
-        $room = $this->room->fresh();
-
-        $this->resetForm($this->campus_id, $this->college_id, $this->department_id);
-
-        return $room;
-    }
-
-    public function delete(): Room
-    {
-        $this->ensureCanManage('rooms.delete');
-
-        if (! $this->room) {
-            throw new LogicException('Cannot delete a room without an active record.');
-        }
-
-        $this->assertRoomMatchesContext($this->room);
-
-        $this->room->delete();
-
-        $room = $this->room->fresh();
-
-        $this->resetForm($this->campus_id, $this->college_id, $this->department_id);
-
-        return $room;
-    }
-
-    public function restore(): Room
-    {
-        $this->ensureCanManage('rooms.restore');
-
-        if (! $this->room) {
-            throw new LogicException('Cannot restore a room without an active record.');
-        }
-
-        $this->assertRoomMatchesContext($this->room);
-
-        $this->room->restore();
-
-        $room = $this->room->fresh();
-
-        $this->resetForm($this->campus_id, $this->college_id, $this->department_id);
-
-        return $room;
-    }
-
     public function resetForm(?int $campusId = null, ?int $collegeId = null, ?int $departmentId = null): void
     {
         $this->reset(['room', 'name', 'floor_no', 'room_no', 'description', 'location']);
@@ -149,7 +72,7 @@ class RoomForm extends Form
         return $this->validate($this->rules());
     }
 
-    protected function rules(): array
+    public function rules(): array
     {
         return [
             'campus_id' => ['required', 'exists:campuses,id'],
@@ -175,7 +98,7 @@ class RoomForm extends Form
         ];
     }
 
-    protected function payload(array $validated): array
+    public function payload(array $validated): array
     {
         return [
             'campus_id' => (int) $validated['campus_id'],
@@ -192,14 +115,14 @@ class RoomForm extends Form
         ];
     }
 
-    protected function assertContext(): void
+    public function assertContext(): void
     {
         if (! $this->campus_id || ! $this->college_id || ! $this->department_id) {
             throw new LogicException('Cannot manage rooms without department context.');
         }
     }
 
-    protected function assertRoomMatchesContext(Room $room): void
+    public function assertRoomMatchesContext(Room $room): void
     {
         $this->assertContext();
 

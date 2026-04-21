@@ -4,9 +4,9 @@ use App\Livewire\Forms\Admin\ProgramForm;
 use App\Models\Campus;
 use App\Models\College;
 use App\Models\Program;
+use App\Support\ProgramDuplicateDetector;
 use App\Traits\CanManage;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -26,6 +26,14 @@ new class extends Component {
     public bool $isEditingProgram = false;
 
     public int $sharedProgramCollegeCount = 0;
+
+    public ?string $programDuplicateConflictType = null;
+
+    public array $programExactDuplicateConflicts = [];
+
+    public array $programSimilarDuplicateConflicts = [];
+
+    public bool $programSimilarityConfirmed = false;
 
     public function mount(): void
     {
@@ -58,6 +66,7 @@ new class extends Component {
         $this->programForm->resetForm();
         $this->isEditingProgram = false;
         $this->sharedProgramCollegeCount = 0;
+        $this->resetProgramDuplicateState();
         $this->programModal = true;
     }
 
@@ -72,6 +81,7 @@ new class extends Component {
         $this->programForm->setProgram($program);
         $this->isEditingProgram = true;
         $this->sharedProgramCollegeCount = $program->colleges()->count();
+        $this->resetProgramDuplicateState();
         $this->programModal = true;
     }
 
@@ -80,6 +90,7 @@ new class extends Component {
         $this->programModal = false;
         $this->isEditingProgram = false;
         $this->sharedProgramCollegeCount = 0;
+        $this->resetProgramDuplicateState();
         $this->resetValidation();
         $this->programForm->resetForm();
     }
@@ -95,18 +106,29 @@ new class extends Component {
 
         $this->programForm->validateForm();
 
-        if (! $this->isEditingProgram && $this->hasDuplicateProgramCode()) {
-            return;
-        }
-
         $this->programModal = false;
+
+        if (!$this->isEditingProgram) {
+            $conflicts = ProgramDuplicateDetector::findConflicts(null, $this->programForm->code, $this->programForm->title);
+
+            if ($conflicts['exact'] !== []) {
+                $this->openExactProgramDuplicateDialog($conflicts['exact'], $conflicts['similar']);
+
+                return;
+            }
+
+            if ($conflicts['similar'] !== []) {
+                $this->openSimilarProgramDuplicateDialog($conflicts['similar']);
+
+                return;
+            }
+
+            $this->resetProgramDuplicateState();
+        }
 
         if ($this->isEditingProgram && $this->sharedProgramCollegeCount > 1) {
             $this->dialog()
-                ->warning(
-                    'Shared Program Update',
-                    'This program is currently assigned to '.$this->sharedProgramCollegeCount.' colleges. Saving changes here will update the shared record for all assigned colleges.'
-                )
+                ->warning('Shared Program Update', 'This program is currently assigned to ' . $this->sharedProgramCollegeCount . ' colleges. Saving changes here will update the shared record for all assigned colleges.')
                 ->confirm('Continue', 'saveProgram')
                 ->cancel('Go Back', 'reopenProgramModal')
                 ->send();
@@ -115,16 +137,17 @@ new class extends Component {
         }
 
         $title = $this->isEditingProgram ? 'Save Changes?' : 'Create Program?';
-        $description = $this->isEditingProgram
-            ? 'Are you sure you want to update this shared program?'
-            : 'Are you sure you want to create this program and assign it to your college?';
+        $description = $this->isEditingProgram ? 'Are you sure you want to update this shared program?' : 'Are you sure you want to create this program and assign it to your college?';
         $confirm = $this->isEditingProgram ? 'Yes, save changes' : 'Yes, create program';
 
-        $this->dialog()
-            ->question($title, $description)
-            ->confirm($confirm, 'saveProgram')
-            ->cancel('Cancel', 'reopenProgramModal')
-            ->send();
+        $this->dialog()->question($title, $description)->confirm($confirm, 'saveProgram')->cancel('Cancel', 'reopenProgramModal')->send();
+    }
+
+    public function proceedWithSimilarProgramCreation(): void
+    {
+        $this->programSimilarityConfirmed = true;
+
+        $this->saveProgram();
     }
 
     public function saveProgram(): void
@@ -132,17 +155,30 @@ new class extends Component {
         $this->ensureCanManage($this->isEditingProgram ? 'programs.update' : 'programs.create');
 
         try {
-            if (! $this->isEditingProgram) {
-                if ($this->hasDuplicateProgramCode()) {
-                    $this->reopenProgramModal();
+            if (!$this->isEditingProgram) {
+                $conflicts = ProgramDuplicateDetector::findConflicts(null, $this->programForm->code, $this->programForm->title);
+
+                if ($conflicts['exact'] !== []) {
+                    $this->programModal = false;
+                    $this->openExactProgramDuplicateDialog($conflicts['exact'], $conflicts['similar']);
+
                     return;
                 }
 
-                $program = $this->programForm->store();
+                if (!$this->programSimilarityConfirmed && $conflicts['similar'] !== []) {
+                    $this->programModal = false;
+                    $this->openSimilarProgramDuplicateDialog($conflicts['similar']);
+
+                    return;
+                }
+
+                $validated = $this->programForm->validateForm();
+                $program = Program::create($this->programForm->payload($validated));
                 $this->college->programs()->syncWithoutDetaching([$program->id]);
                 $message = 'Program created successfully.';
             } else {
-                $program = $this->programForm->update();
+                $validated = $this->programForm->validateForm();
+                $this->programForm->program->update($this->programForm->payload($validated));
                 $message = 'Program details updated successfully.';
             }
 
@@ -152,71 +188,11 @@ new class extends Component {
         } catch (ValidationException $e) {
             $this->reopenProgramModal();
             throw $e;
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             $this->reopenProgramModal();
-            Log::error('Program Save Failed: '.$e->getMessage());
+            Log::error('Program Save Failed: ' . $e->getMessage());
             $this->toast()->error('Error', 'An unexpected error occurred while saving the program.')->send();
         }
-    }
-
-    #[On('confirmDeleteProgram')]
-    public function confirmDeleteProgram(int $id): void
-    {
-        $this->ensureCanManage('programs.delete');
-
-        $program = $this->findManagedProgram($id);
-        $collegeCount = $program->colleges()->count();
-        $message = 'Are you sure you want to remove '.e($program->code).' - '.e($program->title).' from the offered programs?';
-
-        if ($collegeCount > 1) {
-            $message .= ' This shared program is offered by '.$collegeCount.' colleges and will be moved to trash for all of them.';
-        }
-
-        $this->dialog()
-            ->question('Remove Program?', $message)
-            ->confirm('Yes, remove', 'deleteProgram', $program->id)
-            ->cancel('Cancel')
-            ->send();
-    }
-
-    #[On('deleteProgram')]
-    public function deleteProgram(int $id): void
-    {
-        $this->ensureCanManage('programs.delete');
-
-        $program = $this->findManagedProgram($id);
-
-        $program->delete();
-
-        $this->dispatch('pg:eventRefresh-programsTable');
-        $this->toast()->success('Deleted', 'Program moved to trash.')->send();
-    }
-
-    #[On('confirmRestoreProgram')]
-    public function confirmRestoreProgram(int $id): void
-    {
-        $this->ensureCanManage('programs.restore');
-
-        $program = $this->findManagedProgram($id, true);
-
-        $this->dialog()
-            ->question('Restore Program?', 'Are you sure you want to restore '.e($program->code).' - '.e($program->title).'?')
-            ->confirm('Yes, restore', 'restoreProgram', $program->id)
-            ->cancel('Cancel')
-            ->send();
-    }
-
-    #[On('restoreProgram')]
-    public function restoreProgram(int $id): void
-    {
-        $this->ensureCanManage('programs.restore');
-
-        $program = $this->findManagedProgram($id, true);
-
-        $program->restore();
-
-        $this->dispatch('pg:eventRefresh-programsTable');
-        $this->toast()->success('Restored', 'Program has been restored.')->send();
     }
 
     protected function resolveFallbackCollegeContext(): void
@@ -229,43 +205,37 @@ new class extends Component {
         $this->college = $fallbackCollege;
     }
 
-    protected function hasDuplicateProgramCode(): bool
+    protected function resetProgramDuplicateState(): void
     {
-        $duplicate = $this->findDuplicateProgramByCode($this->programForm->code);
-
-        if (! $duplicate) {
-            return false;
-        }
-
-        $this->addError('programForm.code', 'A program with this code already exists.');
-        $this->toast()->warning('Duplicate Program Code', 'Use a different program code before saving.')->send();
-
-        return true;
+        $this->programDuplicateConflictType = null;
+        $this->programExactDuplicateConflicts = [];
+        $this->programSimilarDuplicateConflicts = [];
+        $this->programSimilarityConfirmed = false;
     }
 
-    protected function findDuplicateProgramByCode(?string $code): ?Program
+    protected function openExactProgramDuplicateDialog(array $exactConflicts, array $similarConflicts = []): void
     {
-        $normalizedCode = Str::lower(trim((string) $code));
+        $this->programDuplicateConflictType = 'exact';
+        $this->programExactDuplicateConflicts = $exactConflicts;
+        $this->programSimilarDuplicateConflicts = $similarConflicts;
+        $this->programSimilarityConfirmed = false;
 
-        if ($normalizedCode === '') {
-            return null;
-        }
+        $this->dialog()->warning('Exact Duplicate Program Found', ProgramDuplicateDetector::exactWarningMessage($exactConflicts, $similarConflicts))->confirm('Go Back', 'reopenProgramModal')->send();
+    }
 
-        return Program::query()
-            ->withTrashed()
-            ->when(
-                $this->isEditingProgram && $this->programForm->program,
-                fn ($query) => $query->whereKeyNot($this->programForm->program->id)
-            )
-            ->whereRaw('LOWER(code) = ?', [$normalizedCode])
-            ->first();
+    protected function openSimilarProgramDuplicateDialog(array $similarConflicts): void
+    {
+        $this->programDuplicateConflictType = 'similar';
+        $this->programExactDuplicateConflicts = [];
+        $this->programSimilarDuplicateConflicts = $similarConflicts;
+        $this->programSimilarityConfirmed = false;
+
+        $this->dialog()->warning('Possible Duplicate Program', ProgramDuplicateDetector::similarWarningMessage($similarConflicts))->confirm('Proceed anyway', 'proceedWithSimilarProgramCreation')->cancel('Go Back', 'reopenProgramModal')->send();
     }
 
     protected function findManagedProgram(int $id, bool $includeTrashed = false): Program
     {
-        $query = Program::query()
-            ->whereKey($id)
-            ->whereHas('colleges', fn ($query) => $query->whereKey($this->college->id));
+        $query = Program::query()->whereKey($id)->whereHas('colleges', fn($query) => $query->whereKey($this->college->id));
 
         if ($includeTrashed) {
             $query->withTrashed();
@@ -311,10 +281,12 @@ new class extends Component {
         <livewire:admin.tables.programs-table :college-id="$college->id" />
     </div>
 
-    <x-modal wire="programModal" title="{{ $isEditingProgram ? 'Edit Program Details' : 'New Program' }}" size="3xl">
+    <x-modal wire="programModal" title="{{ $isEditingProgram ? 'Edit Program Details' : 'New Program' }}"
+        size="3xl">
         <div class="space-y-4">
             <div class="grid gap-4 md:grid-cols-2">
-                <x-input label="Program Code" wire:model="programForm.code" hint="Use a short code like BSCS or BSEd." />
+                <x-input label="Program Code" wire:model="programForm.code"
+                    hint="Use a short code like BSCS or BSEd." />
                 <x-input label="Program Title" wire:model="programForm.title" />
             </div>
 
@@ -332,7 +304,8 @@ new class extends Component {
                 hint="Optional short description for this program." />
 
             @if ($isEditingProgram && $sharedProgramCollegeCount > 1)
-                <div class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200">
+                <div
+                    class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200">
                     This is a shared program assigned to <strong>{{ $sharedProgramCollegeCount }}</strong> colleges.
                     Editing it here will update the shared record for all attached colleges.
                 </div>

@@ -3,15 +3,11 @@
 namespace App\Livewire\Forms\Admin;
 
 use App\Models\Program;
-use App\Traits\CanManage;
 use Illuminate\Validation\Rule;
 use Livewire\Form;
-use LogicException;
 
 class ProgramForm extends Form
 {
-    use CanManage;
-
     public ?Program $program = null;
 
     public string $code = '';
@@ -37,38 +33,6 @@ class ProgramForm extends Form
         $this->is_active = $program->is_active;
     }
 
-    public function store(): Program
-    {
-        $this->ensureCanManage('programs.create');
-
-        $validated = $this->validateForm();
-
-        $program = Program::create($this->payload($validated));
-
-        $this->resetForm();
-
-        return $program;
-    }
-
-    public function update(): Program
-    {
-        $this->ensureCanManage('programs.update');
-
-        if (! $this->program) {
-            throw new LogicException('Cannot update a program without an active record.');
-        }
-
-        $validated = $this->validateForm();
-
-        $this->program->update($this->payload($validated));
-
-        $program = $this->program->fresh();
-
-        $this->resetForm();
-
-        return $program;
-    }
-
     public function resetForm(): void
     {
         $this->reset(['program', 'code', 'title', 'description', 'no_of_years', 'level']);
@@ -80,7 +44,7 @@ class ProgramForm extends Form
         return $this->validate($this->rules());
     }
 
-    protected function rules(): array
+    public function rules(): array
     {
         return [
             'code' => ['required', 'string', 'max:255'],
@@ -92,7 +56,7 @@ class ProgramForm extends Form
         ];
     }
 
-    protected function payload(array $validated): array
+    public function payload(array $validated): array
     {
         return [
             'code' => trim($validated['code']),

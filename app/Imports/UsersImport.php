@@ -6,6 +6,7 @@ use App\Models\College;
 use App\Models\Department;
 use App\Models\EmployeeProfile;
 use App\Models\FacultyProfile;
+use App\Models\Permission;
 use App\Models\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Hash;
@@ -17,16 +18,20 @@ class UsersImport implements ToCollection, WithHeadingRow
     public function collection(Collection $rows): void
     {
         foreach ($rows as $row) {
-            if (empty($row['email'])) {
+            $email = trim((string) ($row['email'] ?? ''));
+
+            if ($email === '') {
                 continue;
             }
 
-            $user = User::withTrashed()->firstOrNew(['email' => $row['email']]);
+            $user = User::withTrashed()->firstOrNew(['email' => $email]);
             $user->fill([
-                'name' => trim(($row['first_name'] ?? '').' '.($row['middle_name'] ?? '').' '.($row['last_name'] ?? '')),
-                'password' => Hash::make($row['password'] ?? 'password123'),
+                'name' => $this->fullNameFromRow($row),
+                'password' => filled($row['password'] ?? null)
+                    ? Hash::make((string) $row['password'])
+                    : ($user->password ?: Hash::make('password123')),
                 'email_verified_at' => $user->email_verified_at ?? now(),
-                'is_active' => true,
+                'is_active' => $this->normalizeBoolean($row['is_active'] ?? true),
             ]);
             $user->save();
 
@@ -34,11 +39,17 @@ class UsersImport implements ToCollection, WithHeadingRow
                 $user->restore();
             }
 
-            if (! empty($row['roles'])) {
-                $user->syncRoles(array_map('trim', explode(',', $row['roles'])));
+            if ($row->has('roles')) {
+                $user->syncRoles($this->csvValues($row['roles']));
             }
 
-            $type = strtolower((string) ($row['type'] ?? ''));
+            if ($row->has('direct_permissions')) {
+                $user->syncPermissions(
+                    Permission::query()->whereIn('name', $this->csvValues($row['direct_permissions']))->get()
+                );
+            }
+
+            $type = strtolower(trim((string) ($row['type'] ?? 'standard')));
             $assignment = $this->resolveAcademicAssignment($row);
             $profileNames = [
                 'first_name' => $row['first_name'] ?? '',
@@ -46,40 +57,16 @@ class UsersImport implements ToCollection, WithHeadingRow
                 'last_name' => $row['last_name'] ?? '',
             ];
 
-            if ($type === 'faculty') {
-                $facultyProfile = FacultyProfile::withTrashed()->updateOrCreate(
-                    ['user_id' => $user->id],
-                    array_merge($profileNames, $assignment, [
-                        'email' => $user->email,
-                        'academic_rank' => $row['academic_rank'] ?? null,
-                        'contactno' => $row['contactno'] ?? null,
-                        'sex' => filled($row['sex'] ?? null) ? ucfirst(strtolower((string) $row['sex'])) : null,
-                        'birthday' => $row['birthday'] ?? null,
-                        'address' => $row['address'] ?? null,
-                    ])
-                );
-
-                if ($facultyProfile->trashed()) {
-                    $facultyProfile->restore();
-                }
-
-                EmployeeProfile::withTrashed()->where('user_id', $user->id)->delete();
-            } elseif ($type === 'employee') {
-                $employeeProfile = EmployeeProfile::withTrashed()->updateOrCreate(
-                    ['user_id' => $user->id],
-                    array_merge($profileNames, $assignment, [
-                        'position' => $row['position'] ?? null,
-                    ])
-                );
-
-                if ($employeeProfile->trashed()) {
-                    $employeeProfile->restore();
-                }
-
-                FacultyProfile::withTrashed()->where('user_id', $user->id)->delete();
+            if (in_array($type, ['faculty', 'dual'], true)) {
+                $this->syncFacultyProfile($user, $profileNames, $assignment, $row);
             } else {
-                FacultyProfile::withTrashed()->where('user_id', $user->id)->delete();
-                EmployeeProfile::withTrashed()->where('user_id', $user->id)->delete();
+                FacultyProfile::query()->where('user_id', $user->id)->delete();
+            }
+
+            if (in_array($type, ['employee', 'dual'], true)) {
+                $this->syncEmployeeProfile($user, $profileNames, $assignment, $row);
+            } else {
+                EmployeeProfile::query()->where('user_id', $user->id)->delete();
             }
         }
     }
@@ -122,5 +109,84 @@ class UsersImport implements ToCollection, WithHeadingRow
             'college_id' => null,
             'department_id' => null,
         ];
+    }
+
+    protected function syncFacultyProfile(User $user, array $profileNames, array $assignment, Collection $row): void
+    {
+        $profile = FacultyProfile::withTrashed()
+            ->where('user_id', $user->id)
+            ->latest('id')
+            ->first() ?? new FacultyProfile(['user_id' => $user->id]);
+
+        $profile->fill(array_merge($profileNames, $assignment, [
+            'email' => $user->email,
+            'academic_rank' => $this->blankToNull($row['academic_rank'] ?? null),
+            'contactno' => $this->blankToNull($row['contactno'] ?? null),
+            'sex' => filled($row['sex'] ?? null) ? ucfirst(strtolower((string) $row['sex'])) : null,
+            'birthday' => $this->blankToNull($row['birthday'] ?? null),
+            'address' => $this->blankToNull($row['address'] ?? null),
+        ]));
+        $profile->user_id = $user->id;
+        $profile->save();
+
+        if ($profile->trashed()) {
+            $profile->restore();
+        }
+    }
+
+    protected function syncEmployeeProfile(User $user, array $profileNames, array $assignment, Collection $row): void
+    {
+        $profile = EmployeeProfile::withTrashed()
+            ->where('user_id', $user->id)
+            ->latest('id')
+            ->first() ?? new EmployeeProfile(['user_id' => $user->id]);
+
+        $profile->fill(array_merge($profileNames, $assignment, [
+            'position' => $this->blankToNull($row['position'] ?? null),
+        ]));
+        $profile->user_id = $user->id;
+        $profile->save();
+
+        if ($profile->trashed()) {
+            $profile->restore();
+        }
+    }
+
+    protected function fullNameFromRow(Collection $row): string
+    {
+        return trim(implode(' ', array_filter([
+            trim((string) ($row['first_name'] ?? '')),
+            trim((string) ($row['middle_name'] ?? '')),
+            trim((string) ($row['last_name'] ?? '')),
+        ])));
+    }
+
+    protected function csvValues(mixed $value): array
+    {
+        if (! filled($value)) {
+            return [];
+        }
+
+        return collect(explode(',', (string) $value))
+            ->map(fn (string $item): string => trim($item))
+            ->filter()
+            ->values()
+            ->all();
+    }
+
+    protected function blankToNull(mixed $value): ?string
+    {
+        $value = trim((string) $value);
+
+        return $value === '' ? null : $value;
+    }
+
+    protected function normalizeBoolean(mixed $value): bool
+    {
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        return in_array(strtolower(trim((string) $value)), ['1', 'true', 'yes', 'y', 'active'], true);
     }
 }

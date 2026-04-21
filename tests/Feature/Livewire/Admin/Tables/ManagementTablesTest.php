@@ -123,7 +123,7 @@ describe('UsersTable', function () {
         ]);
     });
 
-    it('limits the datasource to managed roles and honors soft delete state', function () {
+    it('lists active users by default and honors soft delete state', function () {
         $managedUser = User::factory()->faculty()->create();
         $standardUser = User::factory()->create();
         $trashedManagedUser = User::factory()->deptAdmin()->create();
@@ -133,27 +133,27 @@ describe('UsersTable', function () {
 
         expect($component->instance()->datasource()->pluck('id')->all())
             ->toContain($managedUser->id)
-            ->not->toContain($standardUser->id, $trashedManagedUser->id);
+            ->toContain($standardUser->id)
+            ->not->toContain($trashedManagedUser->id);
 
         $component->set('softDeletes', 'withTrashed');
 
         expect($component->instance()->datasource()->pluck('id')->all())
-            ->toContain($managedUser->id, $trashedManagedUser->id)
-            ->not->toContain($standardUser->id);
+            ->toContain($managedUser->id, $standardUser->id, $trashedManagedUser->id);
     });
 
-    it('builds avatar, roles list, and position rank field values', function () {
+    it('builds avatar, roles list, profile type, and status field values', function () {
         $avatarUser = User::factory()->create([
             'name' => 'John Sample',
             'avatar' => 'https://example.test/avatar.png',
         ]);
         $avatarUser->assignRole('superAdmin');
 
-        $dualRoleUser = User::factory()->create(['name' => 'Mary Ann Stone']);
-        $dualRoleUser->assignRole(['collegeAdmin', 'deptAdmin']);
+        $dualRoleUser = User::factory()->dualRole()->create(['name' => 'Mary Ann Stone']);
 
         $facultyUser = User::factory()->faculty()->create([
             'name' => 'Jane Faculty',
+            'is_active' => false,
         ]);
         $facultyUser->avatar = null;
         $facultyUser->save();
@@ -163,8 +163,9 @@ describe('UsersTable', function () {
 
         expect($fields['avatar_view']($avatarUser->fresh()))->toContain('<img', 'https://example.test/avatar.png')
             ->and($fields['avatar_view']($facultyUser->fresh()))->toContain('JF')
-            ->and($fields['roles_list']($dualRoleUser->fresh('roles')))->toContain('College Admin', 'Dept Admin')
-            ->and($fields['position_rank']($facultyUser->fresh(['facultyProfile'])))->toContain('Instructor I');
+            ->and($fields['roles_list']($dualRoleUser->fresh('roles')))->toContain('Faculty', 'Dept Admin')
+            ->and($fields['profile_type']($dualRoleUser->fresh(['facultyProfile', 'employeeProfile'])))->toContain('Faculty + Employee')
+            ->and($fields['status_badge']($facultyUser->fresh()))->toContain('Inactive');
     });
 
     it('switches action buttons between active and trashed users', function () {
@@ -176,7 +177,7 @@ describe('UsersTable', function () {
         $activeActions = $component->actions($activeUser->fresh());
         $trashedActions = $component->actions($trashedUser->fresh());
 
-        expect(collect($activeActions)->pluck('action')->all())->toBe(['view', 'delete'])
+        expect(collect($activeActions)->pluck('action')->all())->toBe(['manage', 'delete'])
             ->and($activeActions[0]->attributes['href'])->toBe(route('admin.users.show', ['user' => $activeUser->id]))
             ->and($activeActions[1]->attributes['wire:click'])->toContain('confirmDelete')
             ->and(collect($trashedActions)->pluck('action')->all())->toBe(['restore'])

@@ -8,7 +8,8 @@ use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 use TallStackUi\Traits\Interactions;
 
-new class extends Component {
+new class extends Component
+{
     use CanManage, Interactions;
 
     public Campus $campus;
@@ -61,7 +62,8 @@ new class extends Component {
         $this->ensureCanManage('campuses.update');
 
         try {
-            $this->form->update();
+            $validated = $this->form->validateForm();
+            $this->campus->update($this->form->payload($validated));
             $this->campus->refresh();
 
             $this->campusModal = false;
@@ -71,7 +73,7 @@ new class extends Component {
             throw $e;
         } catch (Exception $e) {
             $this->reopenCampusModal();
-            Log::error('Campus Save Failed: ' . $e->getMessage());
+            Log::error('Campus Save Failed: '.$e->getMessage());
             $this->toast()->error('Error', 'An unexpected error occurred while saving the campus.')->send();
         }
     }

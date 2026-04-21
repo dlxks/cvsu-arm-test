@@ -87,11 +87,13 @@ new class extends Component {
     {
         $this->ensureCanManage($this->isEditing ? 'rooms.update' : 'rooms.create');
 
+        $validated = $this->form->validateForm();
+
         if ($this->isEditing) {
-            $this->form->update();
+            $this->form->room->update($this->form->payload($validated));
             $message = 'Room updated successfully.';
         } else {
-            $this->form->store();
+            Room::create($this->form->payload($validated));
             $message = 'Room created successfully.';
         }
 
