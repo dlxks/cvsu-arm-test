@@ -7,8 +7,8 @@ use App\Models\FacultyProfile;
 use App\Models\User;
 use App\Traits\CanManage;
 use App\Traits\HasCascadingLocationSelects;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Hash;
+use Livewire\Attributes\Computed;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Maatwebsite\Excel\Facades\Excel;
@@ -25,19 +25,25 @@ new class extends Component {
 
     public $importFile;
 
-    public Collection $campuses;
+    public array $colleges = [];
 
-    public Collection $colleges;
+    public array $departments = [];
 
-    public Collection $departments;
+    #[Computed]
+    public function campuses()
+    {
+        return Campus::where('is_active', true)->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(fn ($c) => ['label' => $c->name, 'value' => $c->id])
+            ->toArray();
+    }
 
     public function mount()
     {
         $this->ensureCanManage('faculty_profiles.view');
 
-        $this->campuses = Campus::where('is_active', true)->orderBy('name')->get();
-        $this->colleges = collect();
-        $this->departments = collect();
+        $this->colleges = [];
+        $this->departments = [];
     }
 
     public function create()
@@ -45,8 +51,8 @@ new class extends Component {
         $this->ensureCanManage('faculty_profiles.create');
 
         $this->form->reset();
-        $this->colleges = collect();
-        $this->departments = collect();
+        $this->colleges = [];
+        $this->departments = [];
         $this->createModal = true;
     }
 
@@ -138,18 +144,14 @@ new class extends Component {
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <x-select.styled label="Campus" wire:model.live="form.campus_id" :options="$campuses->map(fn($campus) => ['label' => $campus->name, 'value' => $campus->id])->toArray()"
+                <x-select.styled label="Campus" wire:model.live="form.campus_id" :options="$this->campuses"
                     select="label:label|value:value" />
 
-                <x-select.styled label="College" wire:model.live="form.college_id" :options="$colleges
-                    ->map(fn($college) => ['label' => $college->name, 'value' => $college->id])
-                    ->toArray()"
+                <x-select.styled label="College" wire:model.live="form.college_id" :options="$colleges"
                     select="label:label|value:value" />
 
-                <x-select.styled label="Department" wire:model="form.department_id" :options="$departments
-                    ->map(fn($department) => ['label' => $department->name, 'value' => $department->id])
-                    ->toArray()"
-                    select="label:label|value:value" :disabled="$colleges->isEmpty()" />
+                <x-select.styled label="Department" wire:model="form.department_id" :options="$departments"
+                    select="label:label|value:value" :disabled="empty($colleges)" />
             </div>
 
             <x-input label="Academic Rank" wire:model="form.academic_rank" />

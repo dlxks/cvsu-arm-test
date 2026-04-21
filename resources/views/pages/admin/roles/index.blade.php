@@ -4,7 +4,6 @@ use App\Livewire\Forms\Admin\RolesForm;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Traits\CanManage;
-use Exception;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
@@ -82,7 +81,7 @@ new class extends Component {
             $this->toast()->success('Success', 'Role created successfully.')->send();
         } catch (ValidationException $e) {
             throw $e;
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             Log::error('Role Save Failed: ' . $e->getMessage());
             $this->toast()->error('Error', 'An unexpected error occurred while saving the role.')->send();
         }

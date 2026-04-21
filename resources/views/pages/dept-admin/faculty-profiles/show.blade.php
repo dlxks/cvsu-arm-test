@@ -5,7 +5,7 @@ use App\Models\Campus;
 use App\Models\FacultyProfile;
 use App\Traits\CanManage;
 use App\Traits\HasCascadingLocationSelects;
-use Illuminate\Support\Collection;
+use Livewire\Attributes\Computed;
 use Livewire\Component;
 use TallStackUi\Traits\Interactions;
 
@@ -18,18 +18,24 @@ new class extends Component {
 
     public FacultyProfileUpdateForm $form;
 
-    public Collection $campuses;
+    public array $colleges = [];
 
-    public Collection $colleges;
+    public array $departments = [];
 
-    public Collection $departments;
+    #[Computed]
+    public function campuses()
+    {
+        return Campus::where('is_active', true)->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(fn ($c) => ['label' => $c->name, 'value' => $c->id])
+            ->toArray();
+    }
 
     public function mount(FacultyProfile $facultyProfile)
     {
         $this->ensureCanManage('faculty_profiles.view');
 
         $this->facultyProfile = $facultyProfile->load(['user', 'campus', 'college', 'department']);
-        $this->campuses = Campus::where('is_active', true)->orderBy('name')->get();
         $this->form->setValues($this->facultyProfile);
         $this->refreshAssignmentOptions();
     }
@@ -135,13 +141,13 @@ new class extends Component {
             <x-input label="Contact No" wire:model="form.contactno" :disabled="!$isEditing" />
             <x-input label="Academic Rank" wire:model="form.academic_rank" :disabled="!$isEditing" />
 
-            <x-select.styled label="Campus" wire:model.live="form.campus_id" :disabled="!$isEditing" :options="$campuses->map(fn($campus) => ['label' => $campus->name, 'value' => $campus->id])->toArray()"
+            <x-select.styled label="Campus" wire:model.live="form.campus_id" :disabled="!$isEditing" :options="$this->campuses"
                 select="label:label|value:value" />
 
-            <x-select.styled label="College" wire:model.live="form.college_id" :disabled="!$isEditing" :options="$colleges->map(fn($college) => ['label' => $college->name, 'value' => $college->id])->toArray()"
+            <x-select.styled label="College" wire:model.live="form.college_id" :disabled="!$isEditing" :options="$colleges"
                 select="label:label|value:value" />
 
-            <x-select.styled label="Department" wire:model="form.department_id" :disabled="!$isEditing" :options="$departments->map(fn($d) => ['label' => $d->name, 'value' => $d->id])->toArray()"
+            <x-select.styled label="Department" wire:model="form.department_id" :disabled="!$isEditing" :options="$departments"
                 select="label:label|value:value" />
 
             <x-select.styled label="Sex" wire:model="form.sex" :disabled="!$isEditing" :options="['Male', 'Female']" />

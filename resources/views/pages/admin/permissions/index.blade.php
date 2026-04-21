@@ -3,7 +3,6 @@
 use App\Livewire\Forms\Admin\PermissionsForm;
 use App\Models\Permission;
 use App\Traits\CanManage;
-use Exception;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\On;
@@ -71,7 +70,7 @@ new class extends Component {
             $this->toast()->success('Success', 'Permission created successfully.')->send();
         } catch (ValidationException $e) {
             throw $e;
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             Log::error('Permission Save Failed: ' . $e->getMessage());
             $this->toast()->error('Error', 'An unexpected error occurred while saving the permission.')->send();
         }

@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
 class FacultyProfile extends Model
@@ -66,7 +67,7 @@ class FacultyProfile extends Model
     protected function birthday(): Attribute
     {
         return Attribute::make(
-            get: fn ($value) => $value ? \Illuminate\Support\Carbon::parse($value) : null,
+            get: fn ($value) => $value ? Carbon::parse($value) : null,
         );
     }
 

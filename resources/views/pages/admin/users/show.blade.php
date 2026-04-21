@@ -1,294 +1,407 @@
 <?php
 
-use App\Livewire\Forms\Admin\UsersForm;
-use App\Models\Campus;
-use App\Models\EmployeeProfile;
-use App\Models\FacultyProfile;
-use App\Models\Permission;
+use App\Livewire\Forms\Admin\UserForm;
 use App\Models\User;
+use App\Support\UserManagement\UserAccountWriter;
 use App\Traits\CanManage;
 use App\Traits\HasCascadingLocationSelects;
-use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
+use App\Traits\ResolvesUserFormOptions;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
+use Livewire\Attributes\Layout;
 use Livewire\Component;
-use Spatie\Permission\Models\Role;
 use TallStackUi\Traits\Interactions;
 
-new class extends Component {
-    use CanManage, HasCascadingLocationSelects, Interactions;
+new #[Layout('layouts.app')] class extends Component
+{
+    use CanManage;
+    use HasCascadingLocationSelects;
+    use Interactions;
+    use ResolvesUserFormOptions;
 
     public User $user;
 
-    public UsersForm $form;
+    public UserForm $form;
 
     public bool $isEditing = false;
 
-    public Collection $campuses;
+    public array $colleges = [];
 
-    public Collection $colleges;
+    public array $departments = [];
 
-    public Collection $departments;
-
-    public Collection $availableRoles;
-
-    public Collection $availablePermissions;
-
-    public function mount(User $user)
+    public function mount(User $user): void
     {
         $this->ensureCanManage('users.view');
-
-        $this->user = $user->load(['facultyProfile', 'employeeProfile', 'roles']);
-        $this->form->setValues($this->user);
-
-        $this->campuses = Campus::where('is_active', true)->orderBy('name')->get();
-        $this->availableRoles = Role::all();
-        $this->availablePermissions = Permission::query()->orderBy('name')->get();
-        $this->refreshAssignmentOptions();
+        $this->loadUser($user);
     }
 
-    public function updatedFormType($value)
+    public function updatedFormType(string $value): void
     {
-        if ($value === 'standard') {
-            $this->form->campus_id = null;
-            $this->form->college_id = null;
-            $this->form->department_id = null;
-            $this->colleges = collect();
-            $this->departments = collect();
-        }
-    }
-
-    public function confirmEdit()
-    {
-        $this->ensureCanManage('users.update');
-
-        if (!$this->isEditing) {
-            $this->dialog()->question('Enable Editing?', 'Do you want to modify this user?')->confirm('Yes', 'enableEditing')->send();
-
+        if ($value !== 'standard') {
             return;
         }
 
-        $this->isEditing = false;
+        $this->form->clearAssignment();
+        $this->colleges = [];
+        $this->departments = [];
     }
 
-    public function enableEditing()
+    public function startEditing(): void
     {
         $this->ensureCanManage('users.update');
 
+        $this->resetValidation();
+        $this->form->setUser($this->user);
+        $this->refreshAssignmentOptions();
         $this->isEditing = true;
     }
 
-    public function confirmSave()
+    public function confirmEdit(): void
     {
         $this->ensureCanManage('users.update');
 
-        // Add a warning if they are downgrading a user to "Standard"
-        if ($this->form->type === 'standard' && ($this->user->facultyProfile || $this->user->employeeProfile)) {
-            $this->dialog()->warning('Warning!', 'Switching to "Standard" will permanently delete their specific Faculty or Employee records. Continue?')->confirm('Yes, Save Changes', 'save', 'sm')->send();
+        if ($this->isEditing) {
+            $this->cancelEditing();
 
             return;
         }
 
-        $this->dialog()->question('Save Changes?', 'Are you sure you want to update this user?')->confirm('Yes', 'save')->send();
+        $this->dialog()
+            ->question('Enable Editing?', 'Do you want to modify this user account and profile?')
+            ->confirm('Yes', 'startEditing')
+            ->cancel('Cancel')
+            ->send();
     }
 
-    public function save()
+    public function cancelEditing(): void
     {
         $this->ensureCanManage('users.update');
 
-        $this->form->validateForm();
+        $this->resetValidation();
+        $this->loadUser($this->user->fresh());
+        $this->isEditing = false;
+    }
 
-        DB::transaction(function (): void {
-            $assignment = $this->form->type === 'standard' ? ['campus_id' => null, 'college_id' => null, 'department_id' => null] : $this->form->resolveAcademicAssignment();
+    public function save(): void
+    {
+        $this->ensureCanManage('users.update');
 
-            $this->user->update([
-                'name' => $this->form->fullName(),
-                'email' => $this->form->email,
+        try {
+            $this->form->validateForm();
+            $savedUser = app(UserAccountWriter::class)->save($this->form, $this->user);
+
+            $this->syncLoadedUserState($savedUser);
+            $this->isEditing = false;
+
+            $this->toast()->success('Success', 'User updated successfully.')->send();
+        } catch (ValidationException $exception) {
+            throw $exception;
+        } catch (Throwable $exception) {
+            Log::error('User update failed', [
+                'user_id' => $this->user->id,
+                'error' => $exception->getMessage(),
             ]);
 
-            $this->user->syncRoles($this->form->roles);
-            $this->user->syncPermissions($this->form->resolveDirectPermissions());
-
-            if ($this->form->type === 'standard') {
-                FacultyProfile::where('user_id', $this->user->id)->delete();
-                EmployeeProfile::where('user_id', $this->user->id)->delete();
-
-                return;
-            }
-
-            if ($this->form->type === 'faculty') {
-                EmployeeProfile::where('user_id', $this->user->id)->delete();
-
-                FacultyProfile::updateOrCreate(
-                    ['user_id' => $this->user->id],
-                    array_merge($this->form->profileData(), $assignment, [
-                        'academic_rank' => $this->form->academic_rank,
-                        'contactno' => $this->form->contactno,
-                        'address' => $this->form->address,
-                        'sex' => $this->form->sex,
-                        'birthday' => $this->form->birthday ?: null,
-                    ]),
-                );
-
-                return;
-            }
-
-            FacultyProfile::where('user_id', $this->user->id)->delete();
-
-            EmployeeProfile::updateOrCreate(
-                ['user_id' => $this->user->id],
-                array_merge($assignment, [
-                    'first_name' => $this->form->first_name,
-                    'middle_name' => $this->form->middle_name,
-                    'last_name' => $this->form->last_name,
-                    'position' => $this->form->position,
-                ]),
-            );
-        });
-
-        $this->user->refresh()->load(['facultyProfile', 'employeeProfile', 'roles']);
-        $this->form->setValues($this->user);
-        $this->refreshAssignmentOptions();
-        $this->isEditing = false;
-        $this->toast()->success('Success', 'User profile updated successfully.')->send();
+            $this->toast()->error('Error', 'Unable to save the user right now.')->send();
+        }
     }
-}; ?>
 
-<div class="py-8">
-    <div class="mb-6 flex justify-between items-center bg-white p-6 rounded-lg shadow dark:bg-zinc-800">
-        <div class="flex items-center gap-4">
-            <div
-                class="w-16 h-16 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-xl font-bold dark:bg-zinc-700 dark:text-zinc-200">
-                {{ strtoupper($user->initials()) }}
-            </div>
-            <div>
-                <h1 class="text-2xl font-bold dark:text-white">{{ $user->name }}</h1>
-                <p class="text-zinc-500 dark:text-zinc-400">{{ $user->email }}</p>
-                <div class="mt-1 flex flex-wrap gap-1">
-                    @foreach ($user->roles as $role)
-                        <span
-                            class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-                            {{ Str::headline($role->name) }}
-                        </span>
-                    @endforeach
+    public function confirmSave(): void
+    {
+        $this->ensureCanManage('users.update');
+
+        if ($this->form->type === 'standard' && ($this->user->facultyProfile || $this->user->employeeProfile)) {
+            $this->dialog()
+                ->warning('Save Changes?', 'Saving as a standard user will archive the linked faculty and employee profile records.')
+                ->confirm('Continue', 'save')
+                ->cancel('Cancel')
+                ->send();
+
+            return;
+        }
+
+        $this->dialog()
+            ->question('Save Changes?', 'Apply the updates to this user account now?')
+            ->confirm('Save', 'save')
+            ->cancel('Cancel')
+            ->send();
+    }
+
+    public function assignmentPath(): string
+    {
+        $profile = $this->user->facultyProfile ?? $this->user->employeeProfile;
+
+        if (! $profile) {
+            return 'Not assigned';
+        }
+
+        $path = collect([
+            $profile->campus?->name,
+            $profile->college?->name,
+            $profile->department?->name,
+        ])->filter()->implode(' / ');
+
+        return $path !== '' ? $path : 'Not assigned';
+    }
+
+    protected function loadUser(User $user): void
+    {
+        $this->syncLoadedUserState($user->load($this->userRelations()));
+    }
+
+    protected function syncLoadedUserState(User $user): void
+    {
+        $this->user = $user;
+        $this->form->setUser($this->user);
+        $this->refreshAssignmentOptions();
+    }
+
+    protected function userRelations(): array
+    {
+        return [
+            'roles',
+            'facultyProfile.campus',
+            'facultyProfile.college',
+            'facultyProfile.department',
+            'employeeProfile.campus',
+            'employeeProfile.college',
+            'employeeProfile.department',
+        ];
+    }
+};
+?>
+
+<div class="space-y-6 py-8">
+    <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+        <div class="flex items-start gap-4">
+            @if ($user->avatar)
+                <img src="{{ $user->avatar }}" alt="{{ $user->name }}" class="h-16 w-16 rounded-full object-cover" />
+            @else
+                <div
+                    class="flex h-16 w-16 items-center justify-center rounded-full bg-primary-100 text-lg font-semibold text-primary-700 dark:bg-zinc-700 dark:text-zinc-100">
+                    {{ strtoupper($user->initials()) }}
+                </div>
+            @endif
+
+            <div class="space-y-2">
+                <div class="flex flex-wrap items-center gap-2">
+                    <h1 class="text-2xl font-semibold text-zinc-900 dark:text-white">{{ $user->name }}</h1>
+                    <x-badge :text="$form->profileTypeLabel()" color="slate" light />
+                    <x-badge :text="$user->is_active ? 'Active' : 'Inactive'"
+                        :color="$user->is_active ? 'emerald' : 'red'" light />
+                </div>
+
+                <p class="text-sm text-zinc-500 dark:text-zinc-400">{{ $user->email }}</p>
+
+                <div class="flex flex-wrap gap-2">
+                    @forelse ($user->roles as $role)
+                        <x-badge :text="\Illuminate\Support\Str::headline($role->name)" color="primary" light />
+                    @empty
+                        <span class="text-sm text-zinc-500 dark:text-zinc-400">No roles assigned.</span>
+                    @endforelse
                 </div>
             </div>
         </div>
+
         <div class="flex gap-2">
             @can('users.update')
-                <x-button wire:click="confirmEdit" sm :color="$isEditing ? 'red' : 'primary'" :text="$isEditing ? 'Cancel' : 'Edit Profile'" :icon="$isEditing ? 'x-mark' : 'pencil'" />
+                @if ($isEditing)
+                    <x-button flat text="Cancel" wire:click="cancelEditing" sm />
+                    <x-button color="primary" text="Save Changes" wire:click="confirmSave" sm />
+                @else
+                    <x-button color="primary" text="Edit User" icon="pencil" wire:click="confirmEdit" sm />
+                @endif
             @endcan
-            @can('users.view')
-                <x-button tag="a" href="{{ route('admin.users') }}" sm outline text="Back" />
-            @endcan
+
+            <x-button tag="a" href="{{ route('admin.users') }}" outline text="Back" sm />
         </div>
     </div>
 
-    <div class="bg-white p-8 rounded-lg shadow dark:bg-zinc-800">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <x-input label="First Name" wire:model="form.first_name" :disabled="!$isEditing" />
-            <x-input label="Middle Name" wire:model="form.middle_name" :disabled="!$isEditing" />
-            <x-input label="Last Name" wire:model="form.last_name" :disabled="!$isEditing" />
+    @if ($isEditing)
+        <x-card>
+            @include('pages.admin.users.partials.form-fields')
+        </x-card>
+    @else
+        <div class="grid gap-6 xl:grid-cols-3">
+            <div class="xl:col-span-2">
+                <x-card>
+                    <div class="space-y-6">
+                        <div>
+                            <h2 class="text-sm font-semibold text-zinc-700 dark:text-zinc-200">Account Overview</h2>
+                            <p class="text-sm text-zinc-500 dark:text-zinc-400">
+                                Core identity, access level, and assignment details.
+                            </p>
+                        </div>
 
-            <x-input label="Account Email (Primary)" wire:model="form.email" :disabled="!$isEditing" />
+                        <div class="grid gap-6 md:grid-cols-2">
+                            <div>
+                                <p class="text-xs font-medium uppercase tracking-wide text-zinc-400">First Name</p>
+                                <p class="mt-2 text-sm text-zinc-700 dark:text-zinc-100">{{ $form->first_name }}</p>
+                            </div>
 
-            <div>
-                @if ($isEditing)
-                    <x-select.styled label="Account Roles" wire:model="form.roles" multiple :options="$availableRoles
-                        ->map(fn($r) => ['label' => Str::headline($r->name), 'value' => $r->name])
-                        ->toArray()"
-                        select="label:label|value:value" />
-                @else
-                    <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Account Roles</p>
-                    <div class="mt-1">
-                        @foreach ($user->roles as $role)
-                            <span
-                                class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-                                {{ Str::headline($role->name) }}
-                            </span>
-                        @endforeach
+                            <div>
+                                <p class="text-xs font-medium uppercase tracking-wide text-zinc-400">Middle Name</p>
+                                <p class="mt-2 text-sm text-zinc-700 dark:text-zinc-100">
+                                    {{ $form->middle_name !== '' ? $form->middle_name : 'Not set' }}
+                                </p>
+                            </div>
+
+                            <div>
+                                <p class="text-xs font-medium uppercase tracking-wide text-zinc-400">Last Name</p>
+                                <p class="mt-2 text-sm text-zinc-700 dark:text-zinc-100">{{ $form->last_name }}</p>
+                            </div>
+
+                            <div>
+                                <p class="text-xs font-medium uppercase tracking-wide text-zinc-400">Account Status</p>
+                                <p class="mt-2 text-sm text-zinc-700 dark:text-zinc-100">
+                                    {{ $user->is_active ? 'Active' : 'Inactive' }}
+                                </p>
+                            </div>
+
+                            <div>
+                                <p class="text-xs font-medium uppercase tracking-wide text-zinc-400">Profile Type</p>
+                                <p class="mt-2 text-sm text-zinc-700 dark:text-zinc-100">{{ $form->profileTypeLabel() }}</p>
+                            </div>
+
+                            <div>
+                                <p class="text-xs font-medium uppercase tracking-wide text-zinc-400">Assignment</p>
+                                <p class="mt-2 text-sm text-zinc-700 dark:text-zinc-100">{{ $this->assignmentPath() }}</p>
+                            </div>
+                        </div>
+
+                        @if ($user->facultyProfile)
+                            <div class="space-y-4 border-t border-zinc-200 pt-6 dark:border-zinc-700">
+                                <div>
+                                    <h3 class="text-sm font-semibold text-zinc-700 dark:text-zinc-200">Faculty Profile</h3>
+                                    <p class="text-sm text-zinc-500 dark:text-zinc-400">
+                                        Faculty-specific details linked to this account.
+                                    </p>
+                                </div>
+
+                                <div class="grid gap-6 md:grid-cols-2">
+                                    <div>
+                                        <p class="text-xs font-medium uppercase tracking-wide text-zinc-400">Academic Rank</p>
+                                        <p class="mt-2 text-sm text-zinc-700 dark:text-zinc-100">
+                                            {{ $form->academic_rank !== '' ? $form->academic_rank : 'Not set' }}
+                                        </p>
+                                    </div>
+
+                                    <div>
+                                        <p class="text-xs font-medium uppercase tracking-wide text-zinc-400">Contact Number</p>
+                                        <p class="mt-2 text-sm text-zinc-700 dark:text-zinc-100">
+                                            {{ $form->contactno !== '' ? $form->contactno : 'Not set' }}
+                                        </p>
+                                    </div>
+
+                                    <div>
+                                        <p class="text-xs font-medium uppercase tracking-wide text-zinc-400">Sex</p>
+                                        <p class="mt-2 text-sm text-zinc-700 dark:text-zinc-100">
+                                            {{ $form->sex !== '' ? $form->sex : 'Not set' }}
+                                        </p>
+                                    </div>
+
+                                    <div>
+                                        <p class="text-xs font-medium uppercase tracking-wide text-zinc-400">Birthday</p>
+                                        <p class="mt-2 text-sm text-zinc-700 dark:text-zinc-100">
+                                            {{ $form->birthday !== '' ? \Illuminate\Support\Carbon::parse($form->birthday)->format('M d, Y') : 'Not set' }}
+                                        </p>
+                                    </div>
+
+                                    <div class="md:col-span-2">
+                                        <p class="text-xs font-medium uppercase tracking-wide text-zinc-400">Address</p>
+                                        <p class="mt-2 text-sm text-zinc-700 dark:text-zinc-100">
+                                            {{ $form->address !== '' ? $form->address : 'Not set' }}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
+
+                        @if ($user->employeeProfile)
+                            <div class="space-y-4 border-t border-zinc-200 pt-6 dark:border-zinc-700">
+                                <div>
+                                    <h3 class="text-sm font-semibold text-zinc-700 dark:text-zinc-200">Employee Profile</h3>
+                                    <p class="text-sm text-zinc-500 dark:text-zinc-400">
+                                        Employee-specific details linked to this account.
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <p class="text-xs font-medium uppercase tracking-wide text-zinc-400">Position</p>
+                                    <p class="mt-2 text-sm text-zinc-700 dark:text-zinc-100">
+                                        {{ $form->position !== '' ? $form->position : 'Not set' }}
+                                    </p>
+                                </div>
+                            </div>
+                        @endif
                     </div>
-                @endif
+                </x-card>
             </div>
 
-            <div>
-                @if ($isEditing)
-                    <x-select.styled label="Direct Permissions" wire:model="form.direct_permissions" multiple searchable
-                        hint="Assign optional permissions directly to this user" placeholder="Choose permissions"
-                        :options="$availablePermissions
-                            ->map(
-                                fn($permission) => [
-                                    'label' => Str::headline($permission->name),
-                                    'value' => $permission->name,
-                                ],
-                            )
-                            ->toArray()" select="label:label|value:value" />
-                @else
-                    <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Direct Permissions</p>
-                    <div class="mt-1 flex flex-wrap gap-1">
-                        @forelse ($user->getDirectPermissions() as $permission)
-                            <span
-                                class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                                {{ Str::headline($permission->name) }}
-                            </span>
-                        @empty
-                            <span class="text-sm text-zinc-500 dark:text-zinc-400">No direct permissions
-                                assigned.</span>
-                        @endforelse
+            <div class="space-y-6">
+                <x-card>
+                    <div class="space-y-4">
+                        <div>
+                            <h2 class="text-sm font-semibold text-zinc-700 dark:text-zinc-200">Roles</h2>
+                            <p class="text-sm text-zinc-500 dark:text-zinc-400">
+                                Access inherited from assigned roles.
+                            </p>
+                        </div>
+
+                        <div class="flex flex-wrap gap-2">
+                            @forelse ($user->roles as $role)
+                                <x-badge :text="\Illuminate\Support\Str::headline($role->name)" color="primary" light />
+                            @empty
+                                <span class="text-sm text-zinc-500 dark:text-zinc-400">No roles assigned.</span>
+                            @endforelse
+                        </div>
                     </div>
-                @endif
-            </div>
+                </x-card>
 
-            <div>
-                @if ($isEditing)
-                    <x-select.styled label="Profile Type" wire:model.live="form.type" :options="[
-                        ['label' => 'Standard User', 'value' => 'standard'],
-                        ['label' => 'Faculty', 'value' => 'faculty'],
-                        ['label' => 'Employee', 'value' => 'employee'],
-                    ]"
-                        select="label:label|value:value" />
-                @else
-                    <x-input label="Profile Type" :value="Str::headline($form->type)" disabled />
-                @endif
-            </div>
+                <x-card>
+                    <div class="space-y-4">
+                        <div>
+                            <h2 class="text-sm font-semibold text-zinc-700 dark:text-zinc-200">Direct Permissions</h2>
+                            <p class="text-sm text-zinc-500 dark:text-zinc-400">
+                                Permissions granted directly to this account.
+                            </p>
+                        </div>
 
-            {{-- Only show these fields if they are NOT a Standard User --}}
-            @if ($form->type !== 'standard')
-                <div class="md:col-span-3 mt-4">
-                    <h4
-                        class="text-sm font-semibold text-gray-600 border-b pb-1 dark:text-zinc-300 dark:border-zinc-700">
-                        Assignment & Profile Details</h4>
-                </div>
-
-                <x-select.styled label="Campus" wire:model.live="form.campus_id" :disabled="!$isEditing" :options="$campuses->map(fn($campus) => ['label' => $campus->name, 'value' => $campus->id])->toArray()"
-                    select="label:label|value:value" />
-                <x-select.styled label="College" wire:model.live="form.college_id" :disabled="!$isEditing" :options="$colleges
-                    ->map(fn($college) => ['label' => $college->name, 'value' => $college->id])
-                    ->toArray()"
-                    select="label:label|value:value" />
-                <x-select.styled :label="$form->type === 'employee' ? 'Department (Optional)' : 'Department'" :hint="$form->type === 'employee' ? 'Leave this blank if the employee is not assigned to a department.' : null" :placeholder="$form->type === 'employee' ? 'Select a department if applicable' : 'Select a department'"
-                    wire:model="form.department_id" :disabled="!$isEditing" :options="$departments->map(fn($d) => ['label' => $d->name, 'value' => $d->id])->toArray()"
-                    select="label:label|value:value" :required="$form->type === 'faculty'" />
-
-                @if ($form->type === 'faculty')
-                    <x-input label="Academic Rank" wire:model="form.academic_rank" :disabled="!$isEditing" />
-                    <x-input label="Contact No" wire:model="form.contactno" :disabled="!$isEditing" />
-                    <x-select.styled label="Sex" wire:model="form.sex" :disabled="!$isEditing" :options="['Male', 'Female']" />
-                    <x-input label="Birthday" type="date" wire:model="form.birthday" :disabled="!$isEditing" />
-                    <div class="md:col-span-3">
-                        <x-textarea label="Address" wire:model="form.address" :disabled="!$isEditing" />
+                        <div class="flex flex-wrap gap-2">
+                            @forelse ($user->getDirectPermissions() as $permission)
+                                <x-badge
+                                    :text="\Illuminate\Support\Str::headline(str_replace(['.', '_'], ' ', $permission->name))"
+                                    color="emerald" light />
+                            @empty
+                                <span class="text-sm text-zinc-500 dark:text-zinc-400">No direct permissions assigned.</span>
+                            @endforelse
+                        </div>
                     </div>
-                @elseif($form->type === 'employee')
-                    <x-input label="Position" wire:model="form.position" :disabled="!$isEditing" />
-                @endif
-            @endif
+                </x-card>
+
+                <x-card>
+                    <div class="space-y-4">
+                        <div>
+                            <h2 class="text-sm font-semibold text-zinc-700 dark:text-zinc-200">Account Meta</h2>
+                            <p class="text-sm text-zinc-500 dark:text-zinc-400">
+                                Basic timestamps for this user record.
+                            </p>
+                        </div>
+
+                        <div class="space-y-3 text-sm text-zinc-700 dark:text-zinc-100">
+                            <div>
+                                <p class="text-xs font-medium uppercase tracking-wide text-zinc-400">Created</p>
+                                <p class="mt-1">{{ $user->created_at?->format('M d, Y h:i A') }}</p>
+                            </div>
+
+                            <div>
+                                <p class="text-xs font-medium uppercase tracking-wide text-zinc-400">Last Updated</p>
+                                <p class="mt-1">{{ $user->updated_at?->format('M d, Y h:i A') }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </x-card>
+            </div>
         </div>
-
-        @if ($isEditing)
-            <div class="mt-8 flex justify-end">
-                @can('users.update')
-                    <x-button wire:click="confirmSave" color="primary" sm text="Save Changes" />
-                @endcan
-            </div>
-        @endif
-    </div>
+    @endif
 </div>
