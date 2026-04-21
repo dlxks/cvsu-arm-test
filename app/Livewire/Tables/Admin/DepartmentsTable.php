@@ -4,12 +4,13 @@ namespace App\Livewire\Tables\Admin;
 
 use App\Models\Department;
 use App\Traits\CanManage;
-use Exception;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Log;
+use Livewire\Attributes\On;
 use PowerComponents\LivewirePowerGrid\Button;
 use PowerComponents\LivewirePowerGrid\Column;
 use PowerComponents\LivewirePowerGrid\Components\SetUp\Exportable;
+use PowerComponents\LivewirePowerGrid\Components\SetUp\Responsive;
 use PowerComponents\LivewirePowerGrid\Facades\Filter;
 use PowerComponents\LivewirePowerGrid\Facades\PowerGrid;
 use PowerComponents\LivewirePowerGrid\PowerGridComponent;
@@ -47,6 +48,9 @@ final class DepartmentsTable extends PowerGridComponent
             PowerGrid::footer()
                 ->showPerPage()
                 ->showRecordCount(),
+
+            PowerGrid::responsive()
+                ->fixedColumns('code', Responsive::ACTIONS_COLUMN_NAME),
         ];
     }
 
@@ -67,26 +71,29 @@ final class DepartmentsTable extends PowerGridComponent
     {
         return PowerGrid::fields()
             ->add('id')
-            ->add('name')
             ->add('code')
+            ->add('name')
             ->add('description');
     }
 
     public function columns(): array
     {
         return [
-            Column::make('Id', 'id'),
-            Column::make('Name', 'name')
-                ->sortable()
-                ->searchable(),
+            Column::make('Id', 'id')
+                ->hidden(isHidden: true, isForceHidden: false),
 
             Column::make('Code', 'code')
                 ->sortable()
                 ->searchable(),
 
-            Column::make('Description', 'description')
+            Column::make('Name', 'name')
                 ->sortable()
                 ->searchable(),
+
+            Column::make('Description', 'description')
+                ->sortable()
+                ->searchable()
+                ->hidden(isHidden: true, isForceHidden: false),
 
             Column::action('Action'),
         ];
@@ -130,7 +137,7 @@ final class DepartmentsTable extends PowerGridComponent
         return $actions;
     }
 
-    public function confirmDeleteDepartment(array $params): void
+        public function confirmDeleteDepartment(array $params): void
     {
         $this->ensureCanManage('departments.delete');
 
@@ -143,6 +150,7 @@ final class DepartmentsTable extends PowerGridComponent
             ->send();
     }
 
+    #[On('deleteDepartment')]
     public function deleteDepartment(int $id): void
     {
         $this->ensureCanManage('departments.delete');
@@ -153,12 +161,13 @@ final class DepartmentsTable extends PowerGridComponent
             $department->delete();
             $this->dispatch('pg:eventRefresh-'.$this->tableName);
             $this->toast()->success('Deleted', 'Department moved to trash.')->send();
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             Log::error('Department Deletion Failed: '.$e->getMessage());
             $this->toast()->error('Error', 'Failed to delete department. Please try again or contact support.')->send();
         }
     }
 
+    #[On('restoreDepartment')]
     public function confirmRestoreDepartment(array $params): void
     {
         $this->ensureCanManage('departments.restore');
@@ -172,6 +181,7 @@ final class DepartmentsTable extends PowerGridComponent
             ->send();
     }
 
+    #[On('restoreDepartment')]
     public function restoreDepartment(int $id): void
     {
         $this->ensureCanManage('departments.restore');
@@ -182,7 +192,7 @@ final class DepartmentsTable extends PowerGridComponent
             $department->restore();
             $this->dispatch('pg:eventRefresh-'.$this->tableName);
             $this->toast()->success('Restored', 'Department has been restored.')->send();
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             Log::error('Department Restoration Failed: '.$e->getMessage());
             $this->toast()->error('Error', 'Failed to restore department. Please try again or contact support.')->send();
         }

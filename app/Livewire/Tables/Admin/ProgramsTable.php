@@ -4,7 +4,6 @@ namespace App\Livewire\Tables\Admin;
 
 use App\Models\Program;
 use App\Traits\CanManage;
-use Exception;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\On;
@@ -224,7 +223,7 @@ final class ProgramsTable extends PowerGridComponent
             $this->findManagedProgram($id)->delete();
             $this->dispatch('pg:eventRefresh-'.$this->tableName);
             $this->toast()->success('Deleted', 'Program moved to trash.')->send();
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             Log::error('Program Deletion Failed: '.$e->getMessage());
             $this->toast()->error('Error', 'Failed to delete program. Please try again or contact support.')->send();
         }
@@ -251,7 +250,7 @@ final class ProgramsTable extends PowerGridComponent
             $this->findManagedProgram($id, true)->restore();
             $this->dispatch('pg:eventRefresh-'.$this->tableName);
             $this->toast()->success('Restored', 'Program has been restored.')->send();
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             Log::error('Program Restoration Failed: '.$e->getMessage());
             $this->toast()->error('Error', 'Failed to restore program. Please try again or contact support.')->send();
         }

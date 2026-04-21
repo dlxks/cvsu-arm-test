@@ -4,7 +4,6 @@ namespace App\Livewire\Tables\Admin;
 
 use App\Models\Role;
 use App\Traits\CanManage;
-use Exception;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Log;
 use PowerComponents\LivewirePowerGrid\Button;
@@ -129,7 +128,7 @@ final class RolesTable extends PowerGridComponent
             Role::findOrFail($id)->delete();
             $this->toast()->success('Deleted', 'Role moved to trash.')->send();
             $this->dispatch('pg:eventRefresh-'.$this->tableName);
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             Log::error('Role Deletion Failed: '.$e->getMessage());
             $this->toast()->error('Error', 'Failed to delete role. Please try again or contact support.')->send();
         }
@@ -156,7 +155,7 @@ final class RolesTable extends PowerGridComponent
             Role::withTrashed()->findOrFail($id)->restore();
             $this->toast()->success('Restored', 'Role has been restored.')->send();
             $this->dispatch('pg:eventRefresh-'.$this->tableName);
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             Log::error('Role Restoration Failed: '.$e->getMessage());
             $this->toast()->error('Error', 'Failed to restore role. Please try again or contact support.')->send();
         }

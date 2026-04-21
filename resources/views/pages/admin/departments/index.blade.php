@@ -4,13 +4,16 @@ use App\Livewire\Forms\Admin\CollegeForm;
 use App\Livewire\Forms\Admin\DepartmentForm;
 use App\Models\Campus;
 use App\Models\College;
+use App\Models\Department;
 use App\Traits\CanManage;
 use App\Traits\HasDepartmentManagement;
+use Livewire\Attributes\Computed;
 use Livewire\Component;
 use TallStackUi\Traits\Interactions;
 
-new class extends Component {
-    use CanManage, Interactions, HasDepartmentManagement;
+new class extends Component
+{
+    use CanManage, HasDepartmentManagement, Interactions;
 
     public College $college;
 
@@ -30,12 +33,34 @@ new class extends Component {
         $this->college = $college;
         $this->syncDepartmentContextForms();
     }
+
+    #[Computed]
+    public function departmentStats(): array
+    {
+        return [
+            'total' => Department::query()->where('college_id', $this->college->id)->count(),
+            'active' => Department::query()->where('college_id', $this->college->id)->where('is_active', true)->count(),
+            'inactive' => Department::query()->where('college_id', $this->college->id)->where('is_active', false)->count(),
+        ];
+    }
 };
 ?>
 
-<div>
+<div class="space-y-6 py-8">
+
+    {{-- Breadcrumb --}}
+    <nav class="flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
+        <a href="{{ route('campuses.index') }}" class="hover:text-primary-600 dark:hover:text-primary-400">Campuses</a>
+        <span>/</span>
+        <a href="{{ route('campuses.show', [$this->campus->id]) }}"
+            class="hover:text-primary-600 dark:hover:text-primary-400">{{ $campus->code }}</a>
+        <span>/</span>
+        <span class="font-medium text-zinc-700 dark:text-zinc-200">{{ $college->code }}</span>
+    </nav>
+
+    {{-- College Info Card --}}
     <div
-        class="flex flex-col items-start justify-between gap-4 p-6 mb-6 bg-white rounded-lg shadow md:flex-row md:items-center dark:bg-gray-800">
+        class="flex flex-col items-start justify-between gap-4 p-6 bg-white rounded-lg shadow md:flex-row md:items-center dark:bg-gray-800">
         <div>
             <h3 class="text-xl font-medium dark:text-white">{{ $college->code }}</h3>
             <p class="italic text-zinc-600 dark:text-zinc-200">{{ $college->name }}</p>
@@ -59,16 +84,35 @@ new class extends Component {
     </div>
 
     <div
-        class="flex flex-col items-start justify-between gap-4 px-6 py-4 mb-6 bg-white rounded-lg shadow md:flex-row md:items-center dark:bg-gray-800">
-        <h1 class="text-2xl font-bold dark:text-white">Department List</h1>
+        class="flex flex-col items-start justify-between gap-4 px-6 py-4 bg-white rounded-lg shadow md:flex-row md:items-center dark:bg-gray-800">
+        <div class="space-y-1">
+            <h2 class="text-lg font-semibold dark:text-white">Department List</h2>
+            <p class="text-sm text-zinc-500 dark:text-zinc-400">Departments under {{ $college->name }}.</p>
+        </div>
         @can('departments.create')
             <x-button wire:click="openCreateDepartmentModal" sm color="primary" icon="plus" text="New Department" />
         @endcan
     </div>
 
-    <div class="bg-white p-6 rounded-lg shadow dark:bg-zinc-800">
-        <livewire:tables.admin.departments-table :college-id="$college->id" />
+    {{-- Department Stats --}}
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div class="rounded-lg bg-white p-5 shadow dark:bg-gray-800">
+            <p class="text-sm font-medium text-zinc-500 dark:text-zinc-400">Total Departments</p>
+            <p class="mt-1 text-2xl font-bold text-zinc-900 dark:text-white">{{ $this->departmentStats['total'] }}</p>
+        </div>
+        <div class="rounded-lg bg-white p-5 shadow dark:bg-gray-800">
+            <p class="text-sm font-medium text-zinc-500 dark:text-zinc-400">Active</p>
+            <p class="mt-1 text-2xl font-bold text-green-600">{{ $this->departmentStats['active'] }}</p>
+        </div>
+        <div class="rounded-lg bg-white p-5 shadow dark:bg-gray-800">
+            <p class="text-sm font-medium text-zinc-500 dark:text-zinc-400">Inactive</p>
+            <p class="mt-1 text-2xl font-bold text-red-500">{{ $this->departmentStats['inactive'] }}</p>
+        </div>
     </div>
+
+    <x-card>
+        <livewire:tables.admin.departments-table :college-id="$college->id" />
+    </x-card>
 
     <x-modal wire="collegeModal" title="Edit College Details" size="3xl">
         <div class="space-y-4">
@@ -131,4 +175,5 @@ new class extends Component {
             @endcanany
         </x-slot:footer>
     </x-modal>
+
 </div>

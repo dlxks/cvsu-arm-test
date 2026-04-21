@@ -2,10 +2,9 @@
 
 namespace App\Livewire\Tables\Admin;
 
-use App\Models\FacultyProfile;
 use App\Models\EmployeeProfile;
+use App\Models\FacultyProfile;
 use App\Traits\CanManage;
-use Exception;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -115,7 +114,7 @@ final class FacultyProfilesTable extends PowerGridComponent
                     ->slot('View')
                     ->icon('default-eye', ['class' => 'w-4 h-4 text-primary-500 group-hover:text-primary-700'])
                     ->class('group flex items-center gap-1 text-xs text-primary-500 rounded border border-primary-500 px-2 py-1 hover:text-primary-700 hover:bg-zinc-100 transition-all duration-300 cursor-pointer')
-                        ->route('faculty-profiles.show', ['facultyProfile' => $row->id]);
+                    ->route('faculty-profiles.show', ['facultyProfile' => $row->id]);
             }
 
             if ($this->canManage('faculty_profiles.delete')) {
@@ -157,7 +156,7 @@ final class FacultyProfilesTable extends PowerGridComponent
             $this->findManagedProfile($id)->delete();
             $this->dispatch('pg:eventRefresh-'.$this->tableName);
             $this->toast()->success('Deleted', 'Faculty Profile moved to trash.')->send();
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             Log::error('Faculty Profile Deletion Failed: '.$e->getMessage());
             $this->toast()->error('Error', 'Failed to delete faculty profile. Please try again or contact support.')->send();
         }
@@ -184,7 +183,7 @@ final class FacultyProfilesTable extends PowerGridComponent
             $this->findManagedProfile($id, true)->restore();
             $this->dispatch('pg:eventRefresh-'.$this->tableName);
             $this->toast()->success('Restored', 'Faculty Profile has been restored.')->send();
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             Log::error('Faculty Profile Restoration Failed: '.$e->getMessage());
             $this->toast()->error('Error', 'Failed to restore faculty profile. Please try again or contact support.')->send();
         }

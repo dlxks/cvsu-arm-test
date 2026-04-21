@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Builder;
 use PowerComponents\LivewirePowerGrid\Button;
 use PowerComponents\LivewirePowerGrid\Column;
 use PowerComponents\LivewirePowerGrid\Components\SetUp\Exportable;
+use PowerComponents\LivewirePowerGrid\Components\SetUp\Responsive;
 use PowerComponents\LivewirePowerGrid\Facades\Filter;
 use PowerComponents\LivewirePowerGrid\Facades\PowerGrid;
 use PowerComponents\LivewirePowerGrid\PowerGridComponent;
@@ -45,6 +46,9 @@ final class CollegesTable extends PowerGridComponent
             PowerGrid::footer()
                 ->showPerPage()
                 ->showRecordCount(),
+
+            PowerGrid::responsive()
+                ->fixedColumns('name', Responsive::ACTIONS_COLUMN_NAME),
         ];
     }
 
@@ -65,26 +69,29 @@ final class CollegesTable extends PowerGridComponent
     {
         return PowerGrid::fields()
             ->add('id')
-            ->add('name')
             ->add('code')
+            ->add('name')
             ->add('description');
     }
 
     public function columns(): array
     {
         return [
-            Column::make('Id', 'id'),
-            Column::make('Name', 'name')
-                ->sortable()
-                ->searchable(),
+            Column::make('Id', 'id')
+                ->hidden(isHidden: true, isForceHidden: false),
 
             Column::make('Code', 'code')
                 ->sortable()
                 ->searchable(),
 
-            Column::make('Description', 'description')
+            Column::make('Name', 'name')
                 ->sortable()
                 ->searchable(),
+
+            Column::make('Description', 'description')
+                ->sortable()
+                ->searchable()
+                ->hidden(isHidden: true, isForceHidden: false),
 
             Column::action('Action'),
         ];

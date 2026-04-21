@@ -4,7 +4,6 @@ namespace App\Livewire\Tables\Admin;
 
 use App\Models\Permission;
 use App\Traits\CanManage;
-use Exception;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
@@ -127,7 +126,7 @@ final class PermissionsTable extends PowerGridComponent
             Permission::findOrFail($id)->delete();
             $this->toast()->success('Deleted', 'Permission moved to trash.')->send();
             $this->dispatch('pg:eventRefresh-'.$this->tableName);
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             Log::error('Permission Deletion Failed: '.$e->getMessage());
             $this->toast()->error('Error', 'Failed to delete permission. Please try again or contact support.')->send();
         }
@@ -154,7 +153,7 @@ final class PermissionsTable extends PowerGridComponent
             Permission::withTrashed()->findOrFail($id)->restore();
             $this->toast()->success('Restored', 'Permission has been restored.')->send();
             $this->dispatch('pg:eventRefresh-'.$this->tableName);
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             Log::error('Permission Restoration Failed: '.$e->getMessage());
             $this->toast()->error('Error', 'Failed to restore permission. Please try again or contact support.')->send();
         }

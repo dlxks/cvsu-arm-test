@@ -5,7 +5,6 @@ namespace App\Traits;
 use App\Models\College;
 use App\Models\Department;
 use App\Support\DepartmentDuplicateDetector;
-use Exception;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\On;
@@ -87,7 +86,7 @@ trait HasDepartmentManagement
         } catch (ValidationException $e) {
             $this->reopenCollegeModal();
             throw $e;
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             $this->reopenCollegeModal();
             Log::error('College Save Failed: '.$e->getMessage());
             $this->toast()->error('Error', 'An unexpected error occurred while saving the college.')->send();
@@ -198,7 +197,7 @@ trait HasDepartmentManagement
         } catch (ValidationException $e) {
             $this->reopenDepartmentModal();
             throw $e;
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             $this->reopenDepartmentModal();
             Log::error('Department Save Failed: '.$e->getMessage());
             $this->toast()->error('Error', 'An unexpected error occurred while saving the department.')->send();

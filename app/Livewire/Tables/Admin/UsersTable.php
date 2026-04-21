@@ -4,7 +4,6 @@ namespace App\Livewire\Tables\Admin;
 
 use App\Models\User;
 use App\Traits\CanManage;
-use Exception;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -189,7 +188,7 @@ final class UsersTable extends PowerGridComponent
             $user->delete();
             $this->toast()->success('Deleted', 'User moved to trash.')->send();
             $this->dispatch('pg:eventRefresh-'.$this->tableName);
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             Log::error('User Deletion Failed: '.$e->getMessage());
             $this->toast()->error('Error', 'Failed to delete user. Please try again or contact support.')->send();
         }
@@ -218,7 +217,7 @@ final class UsersTable extends PowerGridComponent
             User::withTrashed()->findOrFail($id)->restore();
             $this->toast()->success('Restored', 'User has been restored.')->send();
             $this->dispatch('pg:eventRefresh-'.$this->tableName);
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             Log::error('User Restoration Failed: '.$e->getMessage());
             $this->toast()->error('Error', 'Failed to restore user. Please try again or contact support.')->send();
         }
