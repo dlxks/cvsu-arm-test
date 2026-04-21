@@ -1,17 +1,18 @@
 <?php
 
-namespace App\Livewire\Admin\Tables;
+namespace App\Livewire\Tables\Admin;
 
+use App\Enums\RoomStatusEnum;
 use App\Models\Room;
 use App\Traits\CanManage;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Facades\Auth;
+use Livewire\Attributes\On;
 use PowerComponents\LivewirePowerGrid\Button;
 use PowerComponents\LivewirePowerGrid\Column;
 use PowerComponents\LivewirePowerGrid\Components\SetUp\Exportable;
+use PowerComponents\LivewirePowerGrid\Components\SetUp\Responsive;
 use PowerComponents\LivewirePowerGrid\Facades\Filter;
 use PowerComponents\LivewirePowerGrid\Facades\PowerGrid;
-use PowerComponents\LivewirePowerGrid\Facades\Rule;
 use PowerComponents\LivewirePowerGrid\PowerGridComponent;
 use PowerComponents\LivewirePowerGrid\PowerGridFields;
 use PowerComponents\LivewirePowerGrid\Traits\WithExport;
@@ -20,6 +21,8 @@ use TallStackUi\Traits\Interactions;
 final class RoomsTable extends PowerGridComponent
 {
     use CanManage, Interactions, WithExport;
+
+    public int $departmentId;
 
     public string $tableName = 'roomsTable';
 
@@ -45,6 +48,9 @@ final class RoomsTable extends PowerGridComponent
             PowerGrid::footer()
                 ->showPerPage()
                 ->showRecordCount(),
+
+            PowerGrid::responsive()
+                ->fixedColumns('name', Responsive::ACTIONS_COLUMN_NAME),
         ];
     }
 
@@ -52,7 +58,7 @@ final class RoomsTable extends PowerGridComponent
     {
         return Room::query()
             ->with(['campus', 'college', 'department'])
-            ->where('department_id', $this->departmentId())
+            ->where('department_id', $this->departmentId)
             ->when($this->softDeletes === 'withTrashed', fn ($query) => $query->withTrashed())
             ->when($this->softDeletes === 'onlyTrashed', fn ($query) => $query->onlyTrashed());
     }
@@ -78,8 +84,8 @@ final class RoomsTable extends PowerGridComponent
             ->add('department_name', fn (Room $model) => $model->department?->name ?? '-')
             ->add('location_text', fn (Room $model) => $model->location ?: '-')
             ->add('description_text', fn (Room $model) => $model->description ?: '-')
-            ->add('availability', fn (Room $model) => $model->is_active ? 'Active' : 'Inactive')
-            ->add('status_label', fn (Room $model) => $model->status_label);
+            ->add('availability', fn (Room $model) => $this->statusBadge((bool) $model->is_active))
+            ->add('status_badge', fn (Room $model) => $this->roomStatusBadge($model));
     }
 
     public function columns(): array
@@ -111,7 +117,7 @@ final class RoomsTable extends PowerGridComponent
                 ->searchable(),
             Column::make('Availability', 'availability', 'is_active')
                 ->sortable(),
-            Column::make('Status', 'status_label', 'status')
+            Column::make('Status', 'status_badge', 'status')
                 ->sortable()
                 ->searchable(),
             Column::action('Action'),
@@ -131,7 +137,9 @@ final class RoomsTable extends PowerGridComponent
                 ->dataSource($this->enumOptions(Room::STATUSES))
                 ->optionValue('id')
                 ->optionLabel('name')
-                ->builder(fn (Builder $query, $value) => filled($value) ? $query->where('status', $value) : $query),
+                ->builder(fn (Builder $query, $value) => filled($value)
+                    ? $query->where('status', Room::toDatabaseStatusValue($value))
+                    : $query),
 
             Filter::select('is_active')
                 ->dataSource([
@@ -159,23 +167,23 @@ final class RoomsTable extends PowerGridComponent
     {
         $actions = [];
 
-        if ($this->canManage('rooms.update')) {
-            $actions[] = Button::add('edit-room')
-                ->slot('Edit')
-                ->icon('default-pencil-square', ['class' => 'w-4 h-4 text-blue-500 group-hover:text-blue-700'])
-                ->class('group flex items-center gap-1 text-xs text-blue-500 rounded border border-blue-500 px-2 py-1 hover:text-blue-700 hover:bg-zinc-100 transition-all duration-300 cursor-pointer')
-                ->dispatch('openEditRoomModal', ['room' => $row->id]);
-        }
+        if (! $row->trashed()) {
+            if ($this->canManage('rooms.update')) {
+                $actions[] = Button::add('edit-room')
+                    ->slot('Edit')
+                    ->icon('default-pencil-square', ['class' => 'w-4 h-4 text-blue-500 group-hover:text-blue-700'])
+                    ->class('group flex items-center gap-1 text-xs text-blue-500 rounded border border-blue-500 px-2 py-1 hover:text-blue-700 hover:bg-zinc-100 transition-all duration-300 cursor-pointer')
+                    ->dispatch('openEditRoomModal', ['room' => $row->id]);
+            }
 
-        if ($this->canManage('rooms.delete')) {
-            $actions[] = Button::add('delete-room')
-                ->slot('Remove')
-                ->icon('default-trash', ['class' => 'w-4 h-4 text-red-500 group-hover:text-red-700'])
-                ->class('group flex items-center gap-1 text-xs text-red-500 rounded border border-red-500 px-2 py-1 hover:text-red-700 hover:bg-zinc-100 transition-all duration-300 cursor-pointer')
-                ->call('confirmDeleteRoom', ['id' => $row->id]);
-        }
-
-        if ($this->canManage('rooms.restore')) {
+            if ($this->canManage('rooms.delete')) {
+                $actions[] = Button::add('delete-room')
+                    ->slot('Remove')
+                    ->icon('default-trash', ['class' => 'w-4 h-4 text-red-500 group-hover:text-red-700'])
+                    ->class('group flex items-center gap-1 text-xs text-red-500 rounded border border-red-500 px-2 py-1 hover:text-red-700 hover:bg-zinc-100 transition-all duration-300 cursor-pointer')
+                    ->call('confirmDeleteRoom', ['id' => $row->id]);
+            }
+        } elseif ($this->canManage('rooms.restore')) {
             $actions[] = Button::add('restore-room')
                 ->slot('Restore')
                 ->icon('default-arrow-path', ['class' => 'w-4 h-4 text-amber-500 group-hover:text-amber-700'])
@@ -186,21 +194,7 @@ final class RoomsTable extends PowerGridComponent
         return $actions;
     }
 
-    public function actionRules($row): array
-    {
-        return [
-            Rule::button('edit-room')
-                ->when(fn ($row) => $row->trashed())
-                ->hide(),
-            Rule::button('delete-room')
-                ->when(fn ($row) => $row->trashed())
-                ->hide(),
-            Rule::button('restore-room')
-                ->when(fn ($row) => ! $row->trashed())
-                ->hide(),
-        ];
-    }
-
+    #[On('confirmDeleteRoom')]
     public function confirmDeleteRoom(array $params): void
     {
         $this->ensureCanManage('rooms.delete');
@@ -214,6 +208,7 @@ final class RoomsTable extends PowerGridComponent
             ->send();
     }
 
+    #[On('deleteRoom')]
     public function deleteRoom(int $id): void
     {
         $this->ensureCanManage('rooms.delete');
@@ -225,6 +220,7 @@ final class RoomsTable extends PowerGridComponent
         $this->dispatch('pg:eventRefresh-'.$this->tableName);
     }
 
+    #[On('confirmRestoreRoom')]
     public function confirmRestoreRoom(array $params): void
     {
         $this->ensureCanManage('rooms.restore');
@@ -238,6 +234,7 @@ final class RoomsTable extends PowerGridComponent
             ->send();
     }
 
+    #[On('restoreRoom')]
     public function restoreRoom(int $id): void
     {
         $this->ensureCanManage('rooms.restore');
@@ -249,25 +246,50 @@ final class RoomsTable extends PowerGridComponent
         $this->dispatch('pg:eventRefresh-'.$this->tableName);
     }
 
-    protected function departmentId(): int
-    {
-        $departmentId = Auth::user()?->employeeProfile?->department_id;
-
-        abort_unless(filled($departmentId), 403);
-
-        return (int) $departmentId;
-    }
-
+    /**
+     * Helper Method
+     */
     protected function findManagedRoom(int $id, bool $includeTrashed = false): Room
     {
         $query = Room::query()
             ->where('id', $id)
-            ->where('department_id', $this->departmentId());
+            ->where('department_id', $this->departmentId);
 
         if ($includeTrashed) {
             $query->withTrashed();
         }
 
         return $query->firstOrFail();
+    }
+
+    protected function roomStatusBadge(Room $room): string
+    {
+        $status = Room::normalizeStatusValue($room->status);
+
+        $classes = match ($status) {
+            RoomStatusEnum::USEABLE->value => 'border border-blue-200 bg-blue-100 text-blue-800 dark:border-blue-800 dark:bg-blue-900/50 dark:text-blue-200',
+            RoomStatusEnum::NOT_USEABLE->value => 'border border-purple-200 bg-purple-100 text-purple-800 dark:border-purple-800 dark:bg-purple-900/50 dark:text-purple-200',
+            RoomStatusEnum::UNDER_CONSTRUCTION->value, RoomStatusEnum::UNDER_RENOVATION->value => 'border border-amber-200 bg-amber-100 text-amber-800 dark:border-amber-800 dark:bg-amber-900/50 dark:text-amber-200',
+            default => 'border border-zinc-200 bg-zinc-100 text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200',
+        };
+
+        return $this->badge($room->status_label, $classes);
+    }
+
+    protected function statusBadge(bool $isActive): string
+    {
+        return $this->badge(
+            $isActive ? 'Active' : 'Inactive',
+            $isActive
+                ? 'border border-emerald-200 bg-emerald-100 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-200'
+                : 'border border-red-200 bg-red-100 text-red-800 dark:border-red-800 dark:bg-red-900/50 dark:text-red-200'
+        );
+    }
+
+    protected function badge(string $label, string $classes): string
+    {
+        return '<span class="inline-flex items-center rounded px-2 py-0.5 text-xs font-medium '.$classes.'">'
+            .e($label)
+            .'</span>';
     }
 }

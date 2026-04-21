@@ -83,7 +83,7 @@ new class extends Component {
     </div>
 
     <div class="bg-white p-6 rounded-lg shadow dark:bg-zinc-800">
-        <livewire:admin.tables.departments-table :college-id="$college->id" />
+        <livewire:tables.admin.departments-table :college-id="$college->id" />
     </div>
 
     <x-modal wire="collegeModal" title="Edit College Details" size="3xl">

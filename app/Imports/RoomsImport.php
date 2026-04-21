@@ -2,6 +2,7 @@
 
 namespace App\Imports;
 
+use App\Enums\RoomStatusEnum;
 use App\Models\Department;
 use App\Models\Room;
 use Illuminate\Support\Collection;
@@ -24,7 +25,10 @@ class RoomsImport implements ToCollection, WithHeadingRow
             }
 
             $type = $this->normalizeEnumValue((string) ($row['type'] ?? ''), Room::TYPES);
-            $status = $this->normalizeEnumValue((string) ($row['status'] ?? ''), Room::STATUSES);
+            $status = Room::toDatabaseStatusValue(
+                $this->normalizeEnumValue((string) ($row['status'] ?? ''), Room::STATUSES)
+                    ?? RoomStatusEnum::USEABLE->value
+            );
             $isActive = $this->normalizeBoolean($row['is_active'] ?? true);
 
             $room = Room::withTrashed()->updateOrCreate(
@@ -66,9 +70,24 @@ class RoomsImport implements ToCollection, WithHeadingRow
             return null;
         }
 
-        $normalized = strtoupper(str_replace([' ', '-'], '_', trim($value)));
+        $candidate = trim($value);
 
-        return array_key_exists($normalized, $options) ? $normalized : null;
+        if (array_key_exists($candidate, $options)) {
+            return $candidate;
+        }
+
+        $normalized = strtolower(str_replace([' ', '-'], '_', $candidate));
+
+        foreach ($options as $key => $label) {
+            $normalizedKey = strtolower(str_replace([' ', '-'], '_', (string) $key));
+            $normalizedLabel = strtolower(str_replace([' ', '-'], '_', (string) $label));
+
+            if ($normalized === $normalizedKey || $normalized === $normalizedLabel) {
+                return (string) $key;
+            }
+        }
+
+        return null;
     }
 
     protected function normalizeBoolean(mixed $value): bool

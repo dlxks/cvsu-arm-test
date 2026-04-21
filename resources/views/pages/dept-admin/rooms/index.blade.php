@@ -149,7 +149,7 @@ new class extends Component {
     </div>
 
     <div class="bg-white p-6 rounded-lg shadow dark:bg-zinc-800">
-        <livewire:admin.tables.rooms-table />
+        <livewire:tables.admin.rooms-table :department-id="$departmentId" />
     </div>
 
     <x-modal wire="roomModal" title="{{ $isEditing ? 'Edit Room' : 'New Room' }}" size="3xl">

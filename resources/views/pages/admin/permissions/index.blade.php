@@ -89,7 +89,7 @@ new class extends Component {
     </div>
 
     <div class="bg-white p-6 rounded-lg shadow dark:bg-zinc-800">
-        <livewire:admin.tables.permissions-table />
+        <livewire:tables.admin.permissions-table />
     </div>
 
     <x-modal wire="permissionModal" title="{{ $isEditing ? 'Edit Permission' : 'New Permission' }}">

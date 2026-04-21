@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire\Admin\Tables;
+namespace App\Livewire\Tables\Admin;
 
 use App\Models\College;
 use App\Traits\CanManage;
@@ -101,7 +101,7 @@ final class CollegesTable extends PowerGridComponent
     {
         $actions = [];
 
-        if ($this->canManage('departments.view')) {
+        if (! $row->trashed() && $this->canManage('departments.view')) {
             $actions[] = Button::add('view-college')
                 ->slot('View')
                 ->icon('default-eye', ['class' => 'w-4 h-4 text-primary-500 group-hover:text-primary-700 dark:group-hover:text-primary-400'])

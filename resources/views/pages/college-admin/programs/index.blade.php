@@ -278,7 +278,7 @@ new class extends Component {
     </div>
 
     <div class="bg-white p-6 rounded-lg shadow dark:bg-zinc-800">
-        <livewire:admin.tables.programs-table :college-id="$college->id" />
+        <livewire:tables.admin.programs-table :college-id="$college->id" />
     </div>
 
     <x-modal wire="programModal" title="{{ $isEditingProgram ? 'Edit Program Details' : 'New Program' }}"

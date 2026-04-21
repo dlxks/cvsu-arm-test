@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire\Admin\Tables;
+namespace App\Livewire\Tables\Admin;
 
 use App\Models\FacultyProfile;
 use App\Models\EmployeeProfile;
@@ -14,7 +14,6 @@ use PowerComponents\LivewirePowerGrid\Column;
 use PowerComponents\LivewirePowerGrid\Components\SetUp\Exportable;
 use PowerComponents\LivewirePowerGrid\Facades\Filter;
 use PowerComponents\LivewirePowerGrid\Facades\PowerGrid;
-use PowerComponents\LivewirePowerGrid\Facades\Rule;
 use PowerComponents\LivewirePowerGrid\PowerGridComponent;
 use PowerComponents\LivewirePowerGrid\PowerGridFields;
 use PowerComponents\LivewirePowerGrid\Traits\WithExport;
@@ -110,23 +109,23 @@ final class FacultyProfilesTable extends PowerGridComponent
     {
         $actions = [];
 
-        if ($this->canManage('faculty_profiles.view')) {
-            $actions[] = Button::add('view-faculty')
-                ->slot('View')
-                ->icon('default-eye', ['class' => 'w-4 h-4 text-primary-500 group-hover:text-primary-700'])
-                ->class('group flex items-center gap-1 text-xs text-primary-500 rounded border border-primary-500 px-2 py-1 hover:text-primary-700 hover:bg-zinc-100 transition-all duration-300 cursor-pointer')
-                ->route('department-admin.faculty-profiles.show', ['facultyProfile' => $row->id]);
-        }
+        if (! $row->trashed()) {
+            if ($this->canManage('faculty_profiles.view')) {
+                $actions[] = Button::add('view-faculty')
+                    ->slot('View')
+                    ->icon('default-eye', ['class' => 'w-4 h-4 text-primary-500 group-hover:text-primary-700'])
+                    ->class('group flex items-center gap-1 text-xs text-primary-500 rounded border border-primary-500 px-2 py-1 hover:text-primary-700 hover:bg-zinc-100 transition-all duration-300 cursor-pointer')
+                    ->route('department-admin.faculty-profiles.show', ['facultyProfile' => $row->id]);
+            }
 
-        if ($this->canManage('faculty_profiles.delete')) {
-            $actions[] = Button::add('delete-faculty')
-                ->slot('Remove')
-                ->icon('default-trash', ['class' => 'w-4 h-4 text-red-500 group-hover:text-red-700'])
-                ->class('group flex items-center gap-1 text-xs text-red-500 rounded border border-red-500 px-2 py-1 hover:text-red-700 hover:bg-zinc-100 transition-all duration-300 cursor-pointer')
-                ->call('confirmDeleteFaculty', ['id' => $row->id]);
-        }
-
-        if ($this->canManage('faculty_profiles.restore')) {
+            if ($this->canManage('faculty_profiles.delete')) {
+                $actions[] = Button::add('delete-faculty')
+                    ->slot('Remove')
+                    ->icon('default-trash', ['class' => 'w-4 h-4 text-red-500 group-hover:text-red-700'])
+                    ->class('group flex items-center gap-1 text-xs text-red-500 rounded border border-red-500 px-2 py-1 hover:text-red-700 hover:bg-zinc-100 transition-all duration-300 cursor-pointer')
+                    ->call('confirmDeleteFaculty', ['id' => $row->id]);
+            }
+        } elseif ($this->canManage('faculty_profiles.restore')) {
             $actions[] = Button::add('restore-faculty')
                 ->slot('Restore')
                 ->icon('default-arrow-path', ['class' => 'w-4 h-4 text-amber-500 group-hover:text-amber-700'])
@@ -135,23 +134,6 @@ final class FacultyProfilesTable extends PowerGridComponent
         }
 
         return $actions;
-    }
-
-    public function actionRules($row): array
-    {
-        return [
-            Rule::button('view-faculty')
-                ->when(fn ($row) => $row->trashed())
-                ->hide(),
-
-            Rule::button('delete-faculty')
-                ->when(fn ($row) => $row->trashed())
-                ->hide(),
-
-            Rule::button('restore-faculty')
-                ->when(fn ($row) => ! $row->trashed())
-                ->hide(),
-        ];
     }
 
     public function confirmDeleteFaculty(array $params): void

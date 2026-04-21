@@ -32,9 +32,10 @@ new class extends Component {
     #[Computed]
     public function campuses()
     {
-        return Campus::where('is_active', true)->orderBy('name')
+        return Campus::where('is_active', true)
+            ->orderBy('name')
             ->get(['id', 'name'])
-            ->map(fn ($c) => ['label' => $c->name, 'value' => $c->id])
+            ->map(fn($c) => ['label' => $c->name, 'value' => $c->id])
             ->toArray();
     }
 
@@ -124,7 +125,7 @@ new class extends Component {
     </div>
 
     <div class="bg-white p-6 rounded-lg shadow dark:bg-zinc-800">
-        <livewire:admin.tables.faculty-profiles-table />
+        <livewire:tables.admin.faculty-profiles-table />
     </div>
 
     <x-modal wire="createModal" title="New Faculty">

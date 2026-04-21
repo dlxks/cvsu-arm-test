@@ -84,10 +84,11 @@
                 )" :route="route('dashboard.resolve')" />
 
                 {{-- FACULTY LINKS --}}
-                @if (auth()->user()?->can('faculty_schedules.view') && auth()->user()?->employeeProfile()->exists())
+                @if (auth()->user()?->can('faculty_schedules.view') &&
+                        (auth()->user()?->employeeProfile()->exists() || auth()->user()?->facultyProfile()->exists()))
                     {{-- Teaching Links --}}
                     <x-side-bar.item text="Faculty" opened>
-                        <x-side-bar.item text="Schedules & Subjects" icon="clipboard-document-list" />
+                        <x-side-bar.item text="My Schedules" icon="clipboard-document-list" />
                     </x-side-bar.item>
                 @endif
 

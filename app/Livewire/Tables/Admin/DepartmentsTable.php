@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire\Admin\Tables;
+namespace App\Livewire\Tables\Admin;
 
 use App\Models\Department;
 use App\Traits\CanManage;
@@ -12,7 +12,6 @@ use PowerComponents\LivewirePowerGrid\Column;
 use PowerComponents\LivewirePowerGrid\Components\SetUp\Exportable;
 use PowerComponents\LivewirePowerGrid\Facades\Filter;
 use PowerComponents\LivewirePowerGrid\Facades\PowerGrid;
-use PowerComponents\LivewirePowerGrid\Facades\Rule;
 use PowerComponents\LivewirePowerGrid\PowerGridComponent;
 use PowerComponents\LivewirePowerGrid\PowerGridFields;
 use PowerComponents\LivewirePowerGrid\Traits\WithExport;
@@ -104,23 +103,23 @@ final class DepartmentsTable extends PowerGridComponent
     {
         $actions = [];
 
-        if ($this->canManage('departments.update')) {
-            $actions[] = Button::add('edit')
-                ->slot('Edit')
-                ->icon('default-pencil-square', ['class' => 'w-4 h-4 text-blue-500 group-hover:text-blue-700 dark:group-hover:text-blue-400'])
-                ->class('group flex items-center gap-1 text-xs font-bold text-blue-500 rounded border border-blue-500 px-2 py-1 hover:text-blue-700 hover:bg-zinc-100 dark:hover:bg-blue-800 dark:hover:text-blue-400 transition-all duration-300 cursor-pointer')
-                ->dispatch('openEditDepartmentModal', ['department' => $row->id]);
-        }
+        if (! $row->trashed()) {
+            if ($this->canManage('departments.update')) {
+                $actions[] = Button::add('edit')
+                    ->slot('Edit')
+                    ->icon('default-pencil-square', ['class' => 'w-4 h-4 text-blue-500 group-hover:text-blue-700 dark:group-hover:text-blue-400'])
+                    ->class('group flex items-center gap-1 text-xs font-bold text-blue-500 rounded border border-blue-500 px-2 py-1 hover:text-blue-700 hover:bg-zinc-100 dark:hover:bg-blue-800 dark:hover:text-blue-400 transition-all duration-300 cursor-pointer')
+                    ->dispatch('openEditDepartmentModal', ['department' => $row->id]);
+            }
 
-        if ($this->canManage('departments.delete')) {
-            $actions[] = Button::add('delete')
-                ->slot('Remove')
-                ->icon('default-trash', ['class' => 'w-4 h-4 text-red-500 group-hover:text-red-700 dark:group-hover:text-red-400'])
-                ->class('group flex items-center gap-1 text-xs font-bold text-red-500 rounded border border-red-500 px-2 py-1 hover:text-red-700 hover:bg-zinc-100 dark:hover:bg-red-800 dark:hover:text-red-400 transition-all duration-300 cursor-pointer')
-                ->call('confirmDeleteDepartment', ['id' => $row->id]);
-        }
-
-        if ($this->canManage('departments.restore')) {
+            if ($this->canManage('departments.delete')) {
+                $actions[] = Button::add('delete')
+                    ->slot('Remove')
+                    ->icon('default-trash', ['class' => 'w-4 h-4 text-red-500 group-hover:text-red-700 dark:group-hover:text-red-400'])
+                    ->class('group flex items-center gap-1 text-xs font-bold text-red-500 rounded border border-red-500 px-2 py-1 hover:text-red-700 hover:bg-zinc-100 dark:hover:bg-red-800 dark:hover:text-red-400 transition-all duration-300 cursor-pointer')
+                    ->call('confirmDeleteDepartment', ['id' => $row->id]);
+            }
+        } elseif ($this->canManage('departments.restore')) {
             $actions[] = Button::add('restore')
                 ->slot('Restore')
                 ->icon('default-arrow-path', ['class' => 'w-4 h-4 text-amber-500 group-hover:text-amber-700 dark:group-hover:text-amber-400'])
@@ -129,21 +128,6 @@ final class DepartmentsTable extends PowerGridComponent
         }
 
         return $actions;
-    }
-
-    public function actionRules($row): array
-    {
-        return [
-            Rule::button('edit')
-                ->when(fn ($row) => $row->trashed())
-                ->hide(),
-            Rule::button('delete')
-                ->when(fn ($row) => $row->trashed())
-                ->hide(),
-            Rule::button('restore')
-                ->when(fn ($row) => ! $row->trashed())
-                ->hide(),
-        ];
     }
 
     public function confirmDeleteDepartment(array $params): void

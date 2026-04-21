@@ -1,8 +1,8 @@
 <?php
 
-use App\Livewire\Admin\Tables\PermissionsTable;
-use App\Livewire\Admin\Tables\RolesTable;
-use App\Livewire\Admin\Tables\UsersTable;
+use App\Livewire\Tables\Admin\PermissionsTable;
+use App\Livewire\Tables\Admin\RolesTable;
+use App\Livewire\Tables\Admin\UsersTable;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;

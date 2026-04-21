@@ -16,7 +16,7 @@ describe('Campus model', function () {
     });
 
     it('defines the expected fillable attributes', function () {
-        expect((new Campus())->getFillable())->toBe(['name', 'code', 'description', 'is_active']);
+        expect((new Campus)->getFillable())->toBe(['name', 'code', 'description', 'is_active']);
     });
 
     it('casts is_active to boolean and exposes its colleges and departments', function () {
@@ -36,7 +36,7 @@ describe('College model', function () {
     });
 
     it('defines the expected fillable attributes', function () {
-        expect((new College())->getFillable())->toBe(['name', 'code', 'description', 'campus_id', 'is_active']);
+        expect((new College)->getFillable())->toBe(['name', 'code', 'description', 'campus_id', 'is_active']);
     });
 
     it('casts is_active to boolean and exposes its campus and departments', function () {
@@ -55,7 +55,7 @@ describe('Department model', function () {
     });
 
     it('defines the expected fillable attributes', function () {
-        expect((new Department())->getFillable())->toBe(['name', 'code', 'description', 'campus_id', 'college_id', 'is_active']);
+        expect((new Department)->getFillable())->toBe(['name', 'code', 'description', 'campus_id', 'college_id', 'is_active']);
     });
 
     it('casts is_active to boolean and exposes its campus and college', function () {
@@ -71,7 +71,7 @@ describe('EmployeeProfile model', function () {
     });
 
     it('defines the expected fillable attributes', function () {
-        expect((new EmployeeProfile())->getFillable())->toBe([
+        expect((new EmployeeProfile)->getFillable())->toBe([
             'user_id',
             'employee_no',
             'first_name',
@@ -98,7 +98,7 @@ describe('FacultyProfile model', function () {
     });
 
     it('defines the expected fillable attributes', function () {
-        expect((new FacultyProfile())->getFillable())->toBe([
+        expect((new FacultyProfile)->getFillable())->toBe([
             'user_id',
             'employee_no',
             'first_name',

@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Forms\Admin;
 
+use App\Enums\RoomStatusEnum;
 use App\Models\Room;
 use Illuminate\Validation\Rule;
 use Livewire\Form;
@@ -31,7 +32,7 @@ class RoomForm extends Form
 
     public bool $is_active = true;
 
-    public string $status = 'USEABLE';
+    public string $status = RoomStatusEnum::USEABLE->value;
 
     public function setContext(int $campusId, int $collegeId, int $departmentId): void
     {
@@ -53,7 +54,7 @@ class RoomForm extends Form
         $this->description = $room->description ?? '';
         $this->location = $room->location ?? '';
         $this->is_active = $room->is_active;
-        $this->status = $room->status ?? 'USEABLE';
+        $this->status = Room::normalizeStatusValue($room->status) ?? RoomStatusEnum::USEABLE->value;
     }
 
     public function resetForm(?int $campusId = null, ?int $collegeId = null, ?int $departmentId = null): void
@@ -63,7 +64,7 @@ class RoomForm extends Form
         $this->college_id = $collegeId;
         $this->department_id = $departmentId;
         $this->type = 'LECTURE';
-        $this->status = 'USEABLE';
+        $this->status = RoomStatusEnum::USEABLE->value;
         $this->is_active = true;
     }
 
@@ -111,7 +112,7 @@ class RoomForm extends Form
             'description' => filled($validated['description']) ? trim($validated['description']) : null,
             'location' => filled($validated['location']) ? trim($validated['location']) : null,
             'is_active' => (bool) $validated['is_active'],
-            'status' => filled($validated['status']) ? $validated['status'] : null,
+            'status' => Room::toDatabaseStatusValue($validated['status'] ?? null),
         ];
     }
 

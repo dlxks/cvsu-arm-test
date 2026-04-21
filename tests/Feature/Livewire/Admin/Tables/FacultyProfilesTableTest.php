@@ -1,6 +1,7 @@
 <?php
 
-use App\Livewire\Admin\Tables\FacultyProfilesTable;
+use App\Livewire\Tables\Admin\FacultyProfilesTable;
+use App\Models\College;
 use App\Models\Department;
 use App\Models\EmployeeProfile;
 use App\Models\FacultyProfile;
@@ -57,8 +58,8 @@ describe('FacultyProfilesTable', function () {
         ])->and($actions[0]->attributes['href'])->toBe(route('department-admin.faculty-profiles.show', [
             'facultyProfile' => $profile->id,
         ]))
-            ->and($actions[1]->attributes['wire:click'])->toContain("confirmDeleteFaculty")
-            ->and($actions[2]->attributes['wire:click'])->toContain("confirmRestoreFaculty");
+            ->and($actions[1]->attributes['wire:click'])->toContain('confirmDeleteFaculty')
+            ->and($actions[2]->attributes['wire:click'])->toContain('confirmRestoreFaculty');
     });
 
     it('soft deletes and restores faculty profiles through table actions', function () {
@@ -82,7 +83,7 @@ describe('FacultyProfilesTable', function () {
     it('falls back to college scoped faculty when the employee has no department assignment', function () {
         $college = $this->department->college;
         $otherDepartmentInCollege = Department::factory()->forCollege($college)->create();
-        $otherCollege = \App\Models\College::factory()->forCampus($college->campus)->create();
+        $otherCollege = College::factory()->forCampus($college->campus)->create();
         $departmentOutsideCollege = Department::factory()->forCollege($otherCollege)->create();
 
         $facultyInPrimaryDepartment = FacultyProfile::factory()->forDepartment($this->department)->create();

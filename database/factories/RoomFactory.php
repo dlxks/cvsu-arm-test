@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\RoomStatusEnum;
 use App\Models\Department;
 use App\Models\Room;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -34,7 +35,10 @@ class RoomFactory extends Factory
             'description' => fake()->optional()->sentence(),
             'location' => sprintf('Building %d, Floor %s', $department->college_id, $floorNo),
             'is_active' => true,
-            'status' => fake()->randomElement(array_keys(Room::STATUSES)),
+            'status' => fake()->randomElement(array_map(
+                static fn (RoomStatusEnum $status): string => strtoupper($status->value),
+                RoomStatusEnum::cases()
+            )),
         ];
     }
 

@@ -12,6 +12,11 @@ Route::middleware(['auth'])
             ->middleware('permission:campuses.view')
             ->name('dashboard');
 
+        // Users Routes
+        Route::livewire('/users', 'pages::admin.users.index')
+            ->middleware('permission:users.view')
+            ->name('users');
+
         // Campus/College Routes
         Route::livewire('/campuses', 'pages::admin.campuses.index')
             ->middleware('permission:campuses.view')
@@ -22,14 +27,6 @@ Route::middleware(['auth'])
         Route::livewire('/campuses/{campus}/{college}', 'pages::admin.departments.index')
             ->middleware('permission:departments.view')
             ->name('campuses.college.show');
-
-        // Users Routes
-        Route::livewire('/users', 'pages::admin.users.index')
-            ->middleware('permission:users.view')
-            ->name('users');
-        Route::livewire('/users/{user}', 'pages::admin.users.show')
-            ->middleware('permission:users.view')
-            ->name('users.show');
 
         // Roles Management Routes
         Route::livewire('/roles', 'pages::admin.roles.index')

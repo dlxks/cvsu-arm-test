@@ -1,9 +1,9 @@
 <?php
 
-use App\Livewire\Admin\Tables\CampusesTable;
-use App\Livewire\Admin\Tables\CollegesTable;
-use App\Livewire\Admin\Tables\DepartmentsTable;
-use App\Livewire\Admin\Tables\ProgramsTable;
+use App\Livewire\Tables\Admin\CampusesTable;
+use App\Livewire\Tables\Admin\CollegesTable;
+use App\Livewire\Tables\Admin\DepartmentsTable;
+use App\Livewire\Tables\Admin\ProgramsTable;
 use App\Models\Campus;
 use App\Models\College;
 use App\Models\Department;

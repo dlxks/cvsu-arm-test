@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\RoomStatusEnum;
 use App\Models\Department;
 use App\Models\Room;
 use Illuminate\Database\Seeder;
@@ -14,10 +15,10 @@ class RoomSeeder extends Seeder
     public function run(): void
     {
         $templates = [
-            ['floor_no' => '1', 'room_no' => 101, 'type' => 'LECTURE', 'status' => 'USEABLE'],
-            ['floor_no' => '1', 'room_no' => 102, 'type' => 'LECTURE', 'status' => 'USEABLE'],
-            ['floor_no' => '2', 'room_no' => 201, 'type' => 'LECTURE', 'status' => 'USEABLE'],
-            ['floor_no' => '2', 'room_no' => 210, 'type' => 'LABORATORY', 'status' => 'USEABLE'],
+            ['floor_no' => '1', 'room_no' => 101, 'type' => 'LECTURE', 'status' => strtoupper(RoomStatusEnum::USEABLE->value)],
+            ['floor_no' => '1', 'room_no' => 102, 'type' => 'LECTURE', 'status' => strtoupper(RoomStatusEnum::USEABLE->value)],
+            ['floor_no' => '2', 'room_no' => 201, 'type' => 'LECTURE', 'status' => strtoupper(RoomStatusEnum::USEABLE->value)],
+            ['floor_no' => '2', 'room_no' => 210, 'type' => 'LABORATORY', 'status' => strtoupper(RoomStatusEnum::USEABLE->value)],
         ];
 
         Department::query()->get(['id', 'campus_id', 'college_id', 'code'])->each(function (Department $department) use ($templates): void {

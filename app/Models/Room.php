@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\RoomStatusEnum;
+use App\Enums\RoomTypesEnum;
 use Database\Factories\RoomFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -18,15 +20,15 @@ class Room extends Model
     use HasFactory, SoftDeletes;
 
     public const TYPES = [
-        'LECTURE' => 'Lecture',
-        'LABORATORY' => 'Laboratory',
+        RoomTypesEnum::LECTURE->value => 'Lecture',
+        RoomTypesEnum::LABORATORY->value => 'Laboratory',
     ];
 
     public const STATUSES = [
-        'USEABLE' => 'Usable',
-        'NOT_USEABLE' => 'Not Usable',
-        'UNDER_RENOVATION' => 'Under Renovation',
-        'UNDER_CONSTRUCTION' => 'Under Construction',
+        RoomStatusEnum::USEABLE->value => 'Useable',
+        RoomStatusEnum::NOT_USEABLE->value => 'Not Useable',
+        RoomStatusEnum::UNDER_CONSTRUCTION->value => 'Under Construction',
+        RoomStatusEnum::UNDER_RENOVATION->value => 'Under Renovation',
     ];
 
     protected function isActive(): Attribute
@@ -46,8 +48,40 @@ class Room extends Model
     protected function statusLabel(): Attribute
     {
         return Attribute::make(
-            get: fn () => self::STATUSES[$this->status] ?? ($this->status ?: '-'),
+            get: function (): string {
+                $normalizedStatus = self::normalizeStatusValue($this->status);
+
+                if ($normalizedStatus !== null) {
+                    return self::STATUSES[$normalizedStatus] ?? Str::headline(str_replace('_', ' ', $normalizedStatus));
+                }
+
+                $rawStatus = trim((string) $this->status);
+
+                return $rawStatus !== '' ? Str::headline(str_replace('_', ' ', strtolower($rawStatus))) : '-';
+            },
         );
+    }
+
+    public static function normalizeStatusValue(mixed $status): ?string
+    {
+        if (! filled($status)) {
+            return null;
+        }
+
+        if ($status instanceof RoomStatusEnum) {
+            return $status->value;
+        }
+
+        $normalized = strtolower(str_replace([' ', '-'], '_', trim((string) $status)));
+
+        return RoomStatusEnum::tryFrom($normalized)?->value;
+    }
+
+    public static function toDatabaseStatusValue(mixed $status): ?string
+    {
+        $normalizedStatus = self::normalizeStatusValue($status);
+
+        return $normalizedStatus !== null ? strtoupper($normalizedStatus) : null;
     }
 
     protected function displayName(): Attribute

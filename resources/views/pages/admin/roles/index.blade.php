@@ -100,7 +100,7 @@ new class extends Component {
     </div>
 
     <div class="bg-white p-6 rounded-lg shadow dark:bg-zinc-800">
-        <livewire:admin.tables.roles-table />
+        <livewire:tables.admin.roles-table />
     </div>
 
     <x-modal wire="roleModal" title="{{ $isEditing ? 'Edit Role' : 'New Role' }}">
