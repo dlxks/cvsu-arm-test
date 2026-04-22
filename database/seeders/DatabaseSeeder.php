@@ -20,6 +20,12 @@ class DatabaseSeeder extends Seeder
             CollegeProgramSeeder::class,
             RoomSeeder::class,
             SubjectSeeder::class,
+            SubjectCategorySeeder::class,
+            CurriculumSeeder::class,
+            CurriculumEntrySeeder::class,
+            SubjectProgramSeeder::class,
+            PrerequisiteSeeder::class,
+            PrerequisiteSubjectSeeder::class,
             RoleSeeder::class,
             UserSeeder::class,
         ]);

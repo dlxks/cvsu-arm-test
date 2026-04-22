@@ -17,6 +17,11 @@ final class SubjectsTable extends PowerGridComponent
 {
     public string $tableName = 'subjectsTable';
 
+    public function boot(): void
+    {
+        config(['livewire-powergrid.filter' => 'outside']);
+    }
+
     public function setUp(): array
     {
         $this->showCheckBox();

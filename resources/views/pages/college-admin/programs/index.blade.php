@@ -13,8 +13,7 @@ use Livewire\Attributes\On;
 use Livewire\Component;
 use TallStackUi\Traits\Interactions;
 
-new class extends Component
-{
+new class extends Component {
     use CanManage, Interactions;
 
     public College $college;
@@ -44,12 +43,7 @@ new class extends Component
         $user = auth()
             ->guard()
             ->user()
-            ?->loadMissing([
-                'employeeProfile.campus',
-                'employeeProfile.college',
-                'facultyProfile.campus',
-                'facultyProfile.college',
-            ]);
+            ?->loadMissing(['employeeProfile.campus', 'employeeProfile.college', 'facultyProfile.campus', 'facultyProfile.college']);
         $profile = $user?->employeeProfile ?? $user?->facultyProfile;
 
         if (filled($profile?->campus_id) && filled($profile?->college_id) && $profile?->campus && $profile?->college) {
@@ -77,8 +71,7 @@ new class extends Component
     #[Computed]
     public function stats(): array
     {
-        $baseQuery = Program::query()
-            ->whereHas('colleges', fn ($query) => $query->whereKey($this->college->id));
+        $baseQuery = Program::query()->whereHas('colleges', fn($query) => $query->whereKey($this->college->id));
 
         return [
             'total' => (clone $baseQuery)->count(),
@@ -125,7 +118,7 @@ new class extends Component
 
         $this->programModal = false;
 
-        if (! $this->isEditingProgram) {
+        if (!$this->isEditingProgram) {
             $conflicts = ProgramDuplicateDetector::findConflicts(null, $this->programForm->code, $this->programForm->title);
 
             if ($conflicts['exact'] !== []) {
@@ -145,7 +138,7 @@ new class extends Component
 
         if ($this->isEditingProgram && $this->sharedProgramCollegeCount > 1) {
             $this->dialog()
-                ->warning('Shared Program Update', 'This program is currently assigned to '.$this->sharedProgramCollegeCount.' colleges. Saving changes here will update the shared record for all assigned colleges.')
+                ->warning('Shared Program Update', 'This program is currently assigned to ' . $this->sharedProgramCollegeCount . ' colleges. Saving changes here will update the shared record for all assigned colleges.')
                 ->confirm('Continue', 'saveProgram')
                 ->cancel('Go Back', 'reopenProgramModal')
                 ->send();
@@ -172,7 +165,7 @@ new class extends Component
         $this->ensureCanManage($this->isEditingProgram ? 'programs.update' : 'programs.create');
 
         try {
-            if (! $this->isEditingProgram) {
+            if (!$this->isEditingProgram) {
                 $conflicts = ProgramDuplicateDetector::findConflicts(null, $this->programForm->code, $this->programForm->title);
 
                 if ($conflicts['exact'] !== []) {
@@ -182,7 +175,7 @@ new class extends Component
                     return;
                 }
 
-                if (! $this->programSimilarityConfirmed && $conflicts['similar'] !== []) {
+                if (!$this->programSimilarityConfirmed && $conflicts['similar'] !== []) {
                     $this->programModal = false;
                     $this->openSimilarProgramDuplicateDialog($conflicts['similar']);
 
@@ -207,7 +200,7 @@ new class extends Component
             throw $e;
         } catch (Throwable $e) {
             $this->reopenProgramModal();
-            Log::error('Program Save Failed: '.$e->getMessage());
+            Log::error('Program Save Failed: ' . $e->getMessage());
             $this->toast()->error('Error', 'An unexpected error occurred while saving the program.')->send();
         }
     }
@@ -252,7 +245,7 @@ new class extends Component
 
     protected function findManagedProgram(int $id, bool $includeTrashed = false): Program
     {
-        $query = Program::query()->whereKey($id)->whereHas('colleges', fn ($query) => $query->whereKey($this->college->id));
+        $query = Program::query()->whereKey($id)->whereHas('colleges', fn($query) => $query->whereKey($this->college->id));
 
         if ($includeTrashed) {
             $query->withTrashed();

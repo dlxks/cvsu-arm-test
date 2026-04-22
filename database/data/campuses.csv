@@ -1,13 +1,13 @@
-id,name,code,description
-1,Main Campus,CvSU-Main,NULL
-3,Bacoor City Campus,CvSU-Bacoor,NULL
-4,Carmona Campus,CvSU-Carmona,NULL
-5,Cavite City Campus,CvSU-CCC,NULL
-6,Dasmariñas City Campus,CvSU-Dasma,NULL
-7,General Trias City Campus,CvSU-Gen. Tri,NULL
-8,Imus City Campus,CvSU-Imus,NULL
-9,Naic Campus,CvSU-Naic,NULL
-10,CCAT Campus,CvSU-CCAT,NULL
-11,Silang Campus,CvSU-Silang,NULL
-12,Tanza Campus,CvSU-Tanza,NULL
-13,Trece Martires City Campus,CvSU-Trece,NULL
+id,name,code,description,created_at,updated_at
+1,"Main Campus",CvSU-Main,NULL,"2024-05-24 09:06:47","2024-05-24 09:11:43"
+3,"Bacoor City Campus",CvSU-Bacoor,NULL,"2024-07-05 22:28:29","2024-07-05 22:29:20"
+4,"Carmona Campus",CvSU-Carmona,NULL,"2024-07-05 22:28:46","2024-07-05 22:28:46"
+5,"Cavite City Campus",CvSU-CCC,NULL,"2024-07-05 22:29:03","2024-07-05 22:29:03"
+6,"Dasmariñas City Campus",CvSU-Dasma,NULL,"2024-07-05 22:29:37","2024-07-05 22:29:37"
+7,"General Trias City Campus","CvSU-Gen. Tri",NULL,"2024-07-05 22:30:05","2024-07-05 22:30:05"
+8,"Imus City Campus",CvSU-Imus,NULL,"2024-07-05 22:30:16","2024-07-05 22:30:16"
+9,"Naic Campus",CvSU-Naic,NULL,"2024-07-05 22:30:29","2024-07-05 22:30:29"
+10,"CCAT Campus",CvSU-CCAT,NULL,"2024-07-05 22:30:55","2024-07-05 22:30:55"
+11,"Silang Campus",CvSU-Silang,NULL,"2024-07-05 22:31:50","2024-07-05 22:31:50"
+12,"Tanza Campus",CvSU-Tanza,NULL,"2024-07-05 22:32:00","2024-07-05 22:32:00"
+13,"Trece Martires City Campus",CvSU-Trece,NULL,"2024-07-05 22:32:17","2024-07-05 22:32:17"

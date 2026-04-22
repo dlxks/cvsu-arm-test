@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable(['code', 'title', 'description', 'lecture_units', 'laboratory_units', 'is_credit', 'is_active'])]
@@ -52,5 +54,16 @@ class Subject extends Model
         return Attribute::make(
             get: fn (): string => trim($this->code.' - '.$this->title, ' -'),
         );
+    }
+
+    public function programs(): BelongsToMany
+    {
+        return $this->belongsToMany(Program::class, 'subject_program')
+            ->withTimestamps();
+    }
+
+    public function curriculumEntries(): HasMany
+    {
+        return $this->hasMany(CurriculumEntry::class);
     }
 }
