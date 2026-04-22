@@ -137,7 +137,7 @@ new class extends Component {
 
         try {
             $this->validate(['importFile' => 'required|mimes:csv,xlsx,xls']);
-            Excel::import(new FacultyProfilesImport($this->managedEmployeeProfile(), Auth::id()), $this->importFile);
+            Excel::import(new FacultyProfilesImport($this->managedAcademicProfile(), Auth::id()), $this->importFile);
 
             $this->importModal = false;
             $this->importFile = null;

@@ -93,6 +93,23 @@ class User extends Authenticatable
         return null;
     }
 
+    public function collegeManagementProfile(): FacultyProfile|EmployeeProfile|null
+    {
+        if ($this->employeeProfile) {
+            return filled($this->employeeProfile->campus_id) && filled($this->employeeProfile->college_id)
+                ? $this->employeeProfile
+                : null;
+        }
+
+        if ($this->facultyProfile) {
+            return filled($this->facultyProfile->campus_id) && filled($this->facultyProfile->college_id)
+                ? $this->facultyProfile
+                : null;
+        }
+
+        return null;
+    }
+
     /**
      * Get the user's initials
      */
@@ -161,7 +178,7 @@ class User extends Authenticatable
 
         return match ($route) {
             'dashboard.admin' => true,
-            'dashboard.college' => $this->employeeProfile()->exists(),
+            'dashboard.college' => $this->collegeManagementProfile() !== null,
             'dashboard.department' => $this->departmentManagementProfile() !== null,
             'dashboard.faculty' => $this->hasFacultySignInProfile(),
             default => false,

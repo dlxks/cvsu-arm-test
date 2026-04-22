@@ -93,19 +93,24 @@
                 @endif
 
                 {{-- COLLEGE ADMIN LINKS --}}
-                @if (auth()->user()?->can('departments.view') && auth()->user()?->employeeProfile()->exists())
+                @if (auth()->user()
+                        ?->canAny(['departments.view', 'programs.view', 'faculty_profiles.view', 'subjects.view']))
                     <x-side-bar.item text="College" opened>
-                        <x-side-bar.item text="Departments" icon="briefcase" :current="request()->routeIs('departments.index', 'departments.*')" :route="route('departments.index')" />
+                        @can('departments.view')
+                            <x-side-bar.item text="Departments" icon="briefcase" :current="request()->routeIs('departments.index', 'departments.*')" :route="route('departments.index')" />
+                        @endcan
 
                         @can('programs.view')
                             <x-side-bar.item text="Programs" icon="academic-cap" :current="request()->routeIs('programs.index', 'programs.*')" :route="route('programs.index')" />
                         @endcan
 
                         @can('faculty_profiles.view')
-                            <x-side-bar.item text="Faculty" icon="identification" :current="request()->routeIs(
-                                'college-faculty-profiles.index',
-                                'college-faculty-profiles.*',
-                            )" :route="route('college-faculty-profiles.index')" />
+                            @if (auth()->user()?->collegeManagementProfile())
+                                <x-side-bar.item text="Faculty" icon="identification" :current="request()->routeIs(
+                                    'college-faculty-profiles.index',
+                                    'college-faculty-profiles.*',
+                                )" :route="route('college-faculty-profiles.index')" />
+                            @endif
                         @endcan
 
                         @can('subjects.view')

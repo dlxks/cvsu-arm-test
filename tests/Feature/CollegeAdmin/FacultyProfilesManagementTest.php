@@ -48,6 +48,29 @@ describe('college admin faculty profiles management', function () {
             ->assertSee($profile->email);
     });
 
+    it('serves the college faculty routes for faculty users with explicit college permissions', function () {
+        $user = actingUserWithPermissions([
+            'faculty_profiles.view',
+        ], ['faculty']);
+
+        FacultyProfile::factory()->forDepartment($this->primaryDepartment)->create([
+            'user_id' => $user->id,
+            'email' => $user->email,
+        ]);
+
+        $profile = FacultyProfile::factory()->forDepartment($this->secondaryDepartment)->create();
+
+        $this->actingAs($user)
+            ->get(route('college-faculty-profiles.index'))
+            ->assertOk()
+            ->assertSee('Faculty Profiles');
+
+        $this->actingAs($user)
+            ->get(route('college-faculty-profiles.show', $profile))
+            ->assertOk()
+            ->assertSee($profile->email);
+    });
+
     it('creates a faculty profile and linked user inside the managed college', function () {
         Livewire::actingAs($this->user)
             ->test('pages::dept-admin.faculty-profiles.index')

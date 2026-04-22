@@ -53,6 +53,51 @@ describe('college admin program management', function () {
             ->and($college->fresh()->programs->modelKeys())->toContain($program->id);
     });
 
+    it('faculty users with programs view permission can access the programs page using their faculty profile', function () {
+        $campus = Campus::factory()->create();
+        $college = College::factory()->forCampus($campus)->create([
+            'code' => 'CAS',
+            'name' => 'College of Arts and Sciences',
+        ]);
+        Department::factory()->forCollege($college)->create([
+            'code' => 'CAS-ACAD',
+            'name' => 'Academic Programs Department',
+        ]);
+
+        $user = User::factory()->faculty()->create();
+        $user->givePermissionTo('programs.view');
+
+        Livewire::actingAs($user)
+            ->test('pages::college-admin.programs.index')
+            ->assertSee('Program List')
+            ->assertSee($college->code);
+    });
+
+    it('faculty users without programs view permission are forbidden from the programs page', function () {
+        $campus = Campus::factory()->create();
+        $college = College::factory()->forCampus($campus)->create();
+        Department::factory()->forCollege($college)->create();
+
+        $user = User::factory()->faculty()->create();
+
+        $this->actingAs($user)
+            ->get(route('programs.index'))
+            ->assertRedirect(route('dashboard.resolve'));
+    });
+
+    it('faculty users with only programs view permission do not see the create program action', function () {
+        $campus = Campus::factory()->create();
+        $college = College::factory()->forCampus($campus)->create();
+        Department::factory()->forCollege($college)->create();
+
+        $user = User::factory()->faculty()->create();
+        $user->givePermissionTo('programs.view');
+
+        Livewire::actingAs($user)
+            ->test('pages::college-admin.programs.index')
+            ->assertDontSeeHtml('wire:click="openCreateProgramModal"');
+    });
+
     it('exact duplicate programs are blocked and listed before creation', function () {
         [, $college, , $user] = collegeAdminProgramContext();
         $otherCollege = College::factory()->forCampus($college->campus)->create([

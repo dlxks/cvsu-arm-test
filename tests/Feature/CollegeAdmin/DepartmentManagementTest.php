@@ -48,6 +48,38 @@ describe('college admin department management', function () {
             ->and($department->is_active)->toBeTrue();
     });
 
+    it('faculty users with departments view permission can access the departments page using their faculty profile', function () {
+        $campus = Campus::factory()->create();
+        $college = College::factory()->forCampus($campus)->create([
+            'code' => 'CAS',
+        ]);
+        Department::factory()->forCollege($college)->create([
+            'code' => 'CAS-BASE',
+            'name' => 'Base Department',
+        ]);
+
+        $user = User::factory()->faculty()->create();
+        $user->givePermissionTo('departments.view');
+
+        Livewire::actingAs($user)
+            ->test('pages::college-admin.departments.index')
+            ->assertSee('Department List')
+            ->assertSee($college->code);
+    });
+
+    it('faculty users with only departments view permission do not see the create department action', function () {
+        $campus = Campus::factory()->create();
+        $college = College::factory()->forCampus($campus)->create();
+        Department::factory()->forCollege($college)->create();
+
+        $user = User::factory()->faculty()->create();
+        $user->givePermissionTo('departments.view');
+
+        Livewire::actingAs($user)
+            ->test('pages::college-admin.departments.index')
+            ->assertDontSeeHtml('wire:click="openCreateDepartmentModal"');
+    });
+
     it('college admin sees duplicate warning before creating a similar department in their current college', function () {
         $campus = Campus::factory()->create();
         $college = College::factory()->forCampus($campus)->create([

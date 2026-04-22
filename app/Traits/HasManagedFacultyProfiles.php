@@ -11,7 +11,9 @@ trait HasManagedFacultyProfiles
 {
     protected function managedAcademicProfile(): EmployeeProfile|FacultyProfile
     {
-        $profile = Auth::user()?->departmentManagementProfile();
+        $profile = request()->routeIs('college-faculty-profiles.*')
+            ? Auth::user()?->collegeManagementProfile()
+            : Auth::user()?->departmentManagementProfile();
 
         abort_unless($profile && filled($profile->college_id), 403);
 
@@ -24,7 +26,7 @@ trait HasManagedFacultyProfiles
 
         return FacultyProfile::query()
             ->when(
-                filled($profile->department_id),
+                ! request()->routeIs('college-faculty-profiles.*') && filled($profile->department_id),
                 fn (Builder $query) => $query->where('department_id', $profile->department_id),
                 fn (Builder $query) => $query->where('college_id', $profile->college_id)
             )

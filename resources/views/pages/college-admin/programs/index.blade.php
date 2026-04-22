@@ -43,8 +43,13 @@ new class extends Component
         $user = auth()
             ->guard()
             ->user()
-            ?->loadMissing(['employeeProfile.campus', 'employeeProfile.college']);
-        $profile = $user?->employeeProfile;
+            ?->loadMissing([
+                'employeeProfile.campus',
+                'employeeProfile.college',
+                'facultyProfile.campus',
+                'facultyProfile.college',
+            ]);
+        $profile = $user?->collegeManagementProfile();
 
         if ($profile?->campus && $profile?->college) {
             abort_unless((int) $profile->college->campus_id === (int) $profile->campus->id, 403);
