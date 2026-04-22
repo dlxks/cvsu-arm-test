@@ -21,10 +21,10 @@ Route::middleware(['auth'])
 
         // Faculty Profiles Management Routes
         Route::livewire('/college/faculty-profiles', 'pages::dept-admin.faculty-profiles.index')
-            ->middleware('permission:faculty_profiles.view')
+            ->middleware(['permission:faculty_profiles.view', 'faculty_profile_scope:college'])
             ->name('college-faculty-profiles.index');
         Route::livewire('/college/faculty-profiles/{facultyProfile}', 'pages::dept-admin.faculty-profiles.show')
-            ->middleware('permission:faculty_profiles.view')
+            ->middleware(['permission:faculty_profiles.view', 'faculty_profile_scope:college'])
             ->name('college-faculty-profiles.show');
 
         // Subjects Management Routes

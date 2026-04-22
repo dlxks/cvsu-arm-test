@@ -11,10 +11,10 @@ Route::middleware(['auth'])
 
         // Faculty Profile Routes
         Route::livewire('/faculty-profiles', 'pages::dept-admin.faculty-profiles.index')
-            ->middleware('permission:faculty_profiles.view')
+            ->middleware(['permission:faculty_profiles.view', 'faculty_profile_scope:department'])
             ->name('faculty-profiles.index');
         Route::livewire('/faculty-profiles/{facultyProfile}', 'pages::dept-admin.faculty-profiles.show')
-            ->middleware('permission:faculty_profiles.view')
+            ->middleware(['permission:faculty_profiles.view', 'faculty_profile_scope:department'])
             ->name('faculty-profiles.show');
 
         // Rooms Routes

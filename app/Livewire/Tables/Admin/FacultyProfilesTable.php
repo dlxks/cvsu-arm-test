@@ -23,6 +23,10 @@ final class FacultyProfilesTable extends PowerGridComponent
 
     public string $context = 'department';
 
+    public ?int $collegeId = null;
+
+    public ?int $departmentId = null;
+
     public string $tableName = 'facultyProfilesTable';
 
     public function setUp(): array
@@ -49,8 +53,10 @@ final class FacultyProfilesTable extends PowerGridComponent
 
     public function datasource(): Builder
     {
-        return FacultyProfile::query()
-            ->with(['user', 'campus', 'college', 'department'])
+        return $this->applyManagedScope(
+            FacultyProfile::query()
+                ->with(['user', 'campus', 'college', 'department'])
+        )
             ->when($this->softDeletes === 'withTrashed', fn ($query) => $query->withTrashed())
             ->when($this->softDeletes === 'onlyTrashed', fn ($query) => $query->onlyTrashed());
     }
@@ -189,13 +195,39 @@ final class FacultyProfilesTable extends PowerGridComponent
 
     protected function findManagedProfile(int $id, bool $includeTrashed = false): FacultyProfile
     {
-        $query = FacultyProfile::query()->whereKey($id);
+        $query = $this->applyManagedScope(
+            FacultyProfile::query()->whereKey($id)
+        );
 
         if ($includeTrashed) {
             $query->withTrashed();
         }
 
         return $query->firstOrFail();
+    }
+
+    protected function applyManagedScope(Builder $query): Builder
+    {
+        if ($this->context === 'college' && filled($this->collegeId)) {
+            return $query->where('college_id', $this->collegeId);
+        }
+
+        if ($this->context === 'department' && filled($this->departmentId)) {
+            return $query->where('department_id', $this->departmentId);
+        }
+
+        $user = auth()->guard()->user()?->loadMissing(['employeeProfile', 'facultyProfile']);
+        $profile = $user?->employeeProfile ?? $user?->facultyProfile;
+
+        if ($user?->hasRole('collegeAdmin') && filled($profile?->college_id)) {
+            return $query->where('college_id', $profile->college_id);
+        }
+
+        if ($user?->hasRole('deptAdmin') && filled($profile?->department_id)) {
+            return $query->where('department_id', $profile->department_id);
+        }
+
+        return $query->whereRaw('1 = 0');
     }
 
     protected function facultyShowRouteName(): string

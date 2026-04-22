@@ -3,6 +3,7 @@
 use App\Livewire\Tables\Admin\FacultyProfilesTable;
 use App\Models\College;
 use App\Models\Department;
+use App\Models\EmployeeProfile;
 use App\Models\FacultyProfile;
 use Livewire\Livewire;
 
@@ -14,6 +15,10 @@ describe('FacultyProfilesTable', function () {
             'faculty_profiles.restore',
         ], ['deptAdmin']);
         $this->department = Department::factory()->create();
+
+        EmployeeProfile::factory()->forDepartment($this->department)->create([
+            'user_id' => $this->user->id,
+        ]);
     });
 
     it('exposes relation search mappings and computed field values', function () {
@@ -83,7 +88,7 @@ describe('FacultyProfilesTable', function () {
         expect($profile->fresh()->trashed())->toBeFalse();
     });
 
-    it('lists faculty profiles from all departments when view permission is assigned', function () {
+    it('limits dept admins to faculty profiles in their department', function () {
         $college = $this->department->college;
         $otherDepartmentInCollege = Department::factory()->forCollege($college)->create();
         $otherCollege = College::factory()->forCampus($college->campus)->create();
@@ -94,13 +99,51 @@ describe('FacultyProfilesTable', function () {
         $facultyOutsideCollege = FacultyProfile::factory()->forDepartment($departmentOutsideCollege)->create();
 
         $ids = Livewire::actingAs($this->user)
-            ->test(FacultyProfilesTable::class)
+            ->test(FacultyProfilesTable::class, [
+                'context' => 'department',
+                'departmentId' => $this->department->id,
+            ])
+            ->instance()
+            ->datasource()
+            ->pluck('id')
+            ->all();
+
+        expect($ids)->toContain($facultyInPrimaryDepartment->id)
+            ->not->toContain($facultyInSameCollege->id, $facultyOutsideCollege->id);
+    });
+
+    it('shows college admins faculty profiles from all departments in their college', function () {
+        $collegeAdmin = actingUserWithPermissions([
+            'faculty_profiles.view',
+            'faculty_profiles.delete',
+            'faculty_profiles.restore',
+        ], ['collegeAdmin']);
+
+        EmployeeProfile::factory()->forDepartment($this->department)->create([
+            'user_id' => $collegeAdmin->id,
+            'department_id' => null,
+        ]);
+
+        $college = $this->department->college;
+        $otherDepartmentInCollege = Department::factory()->forCollege($college)->create();
+        $otherCollege = College::factory()->forCampus($college->campus)->create();
+        $departmentOutsideCollege = Department::factory()->forCollege($otherCollege)->create();
+
+        $facultyInPrimaryDepartment = FacultyProfile::factory()->forDepartment($this->department)->create();
+        $facultyInSameCollege = FacultyProfile::factory()->forDepartment($otherDepartmentInCollege)->create();
+        $facultyOutsideCollege = FacultyProfile::factory()->forDepartment($departmentOutsideCollege)->create();
+
+        $ids = Livewire::actingAs($collegeAdmin)
+            ->test(FacultyProfilesTable::class, [
+                'context' => 'college',
+                'collegeId' => $college->id,
+            ])
             ->instance()
             ->datasource()
             ->pluck('id')
             ->all();
 
         expect($ids)->toContain($facultyInPrimaryDepartment->id, $facultyInSameCollege->id)
-            ->toContain($facultyOutsideCollege->id);
+            ->not->toContain($facultyOutsideCollege->id);
     });
 });

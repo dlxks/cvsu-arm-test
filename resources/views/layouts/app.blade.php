@@ -94,12 +94,12 @@
                 {{-- COLLEGE ADMIN LINKS --}}
                 @canany(['departments.view', 'programs.view', 'faculty_profiles.view', 'subjects.view'])
                     <x-side-bar.item text="College" opened>
-                        @can('faculty_profiles.view')
+                        @if (auth()->user()->canAccessCollegeFacultyProfiles())
                             <x-side-bar.item text="Faculty" icon="identification" :current="request()->routeIs(
                                 'college-faculty-profiles.index',
                                 'college-faculty-profiles.*',
                             )" :route="route('college-faculty-profiles.index')" />
-                        @endcan
+                        @endif
 
                         @can('departments.view')
                             <x-side-bar.item text="Departments" icon="briefcase" :current="request()->routeIs('departments.index', 'departments.*')" :route="route('departments.index')" />
@@ -127,9 +127,9 @@
                             <x-side-bar.item text="Schedules" icon="calendar-days" />
                         @endcan
 
-                        @can('faculty_profiles.view')
+                        @if (auth()->user()->canAccessDepartmentFacultyProfiles())
                             <x-side-bar.item text="Faculty" icon="identification" :current="request()->routeIs('faculty-profiles.index', 'faculty-profiles.*')" :route="route('faculty-profiles.index')" />
-                        @endcan
+                        @endif
 
                         @if (auth()->user()->canAccessDepartmentRooms())
                             <x-side-bar.item text="Rooms" icon="building-office" :current="request()->routeIs('rooms.index', 'rooms.*')" :route="route('rooms.index')" />

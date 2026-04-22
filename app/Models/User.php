@@ -116,6 +116,32 @@ class User extends Authenticatable
         return $this->hasDirectPermission('rooms.view') && ! $this->hasRole('collegeAdmin');
     }
 
+    public function canAccessCollegeFacultyProfiles(): bool
+    {
+        if (! $this->can('faculty_profiles.view') || ! $this->hasCollegeAssignment()) {
+            return false;
+        }
+
+        if ($this->hasRole('collegeAdmin')) {
+            return true;
+        }
+
+        return $this->hasDirectPermission('faculty_profiles.view') && ! $this->hasRole('deptAdmin');
+    }
+
+    public function canAccessDepartmentFacultyProfiles(): bool
+    {
+        if (! $this->can('faculty_profiles.view') || ! $this->hasDepartmentAssignment()) {
+            return false;
+        }
+
+        if ($this->hasRole('deptAdmin') || $this->hasRole('collegeAdmin')) {
+            return true;
+        }
+
+        return $this->hasDirectPermission('faculty_profiles.view') && ! $this->hasRole('collegeAdmin');
+    }
+
     public function updatedFacultyProfiles(): HasMany
     {
         return $this->hasMany(FacultyProfile::class, 'updated_by', 'id');

@@ -18,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
             'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
             'room_scope' => \App\Http\Middleware\EnsureRoomScopeAccess::class,
+            'faculty_profile_scope' => \App\Http\Middleware\EnsureFacultyProfileScopeAccess::class,
 
             // Custom guests middleware
             'guests' => \App\Http\Middleware\GuestsMiddleware::class,

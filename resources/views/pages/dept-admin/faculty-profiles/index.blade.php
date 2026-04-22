@@ -8,7 +8,7 @@ use App\Models\Department;
 use App\Models\FacultyProfile;
 use App\Models\User;
 use App\Traits\CanManage;
-use App\Traits\HasCascadingLocationSelects;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -22,7 +22,7 @@ use TallStackUi\Traits\Interactions;
 
 new class extends Component
 {
-    use CanManage, HasCascadingLocationSelects, Interactions, WithFileUploads;
+    use CanManage, Interactions, WithFileUploads;
 
     public FacultyProfileForm $form;
 
@@ -35,6 +35,20 @@ new class extends Component
     public array $colleges = [];
 
     public array $departments = [];
+
+    public string $scope = 'department';
+
+    public ?int $campusId = null;
+
+    public ?int $collegeId = null;
+
+    public ?int $departmentId = null;
+
+    public string $campusName = '-';
+
+    public string $collegeName = '-';
+
+    public string $departmentName = '-';
 
     #[Computed]
     public function campuses()
@@ -49,6 +63,38 @@ new class extends Component
     public function mount()
     {
         $this->ensureCanManage('faculty_profiles.view');
+
+        $this->scope = $this->facultyRouteContext();
+
+        if ($this->scope === 'college') {
+            $college = $this->currentCollege();
+
+            $this->campusId = (int) $college->campus_id;
+            $this->collegeId = (int) $college->id;
+            $this->campusName = $college->campus?->name ?? '-';
+            $this->collegeName = $college->name;
+
+            $this->departments = $this->departmentOptionsForCollege($this->collegeId);
+            $this->departmentId = (int) ($this->departments[0]['value'] ?? 0) ?: null;
+            $this->departmentName = collect($this->departments)
+                ->firstWhere('value', $this->departmentId)['label'] ?? '-';
+        } else {
+            $department = $this->currentDepartment();
+
+            $this->campusId = (int) $department->campus_id;
+            $this->collegeId = (int) $department->college_id;
+            $this->departmentId = (int) $department->id;
+            $this->campusName = $department->campus?->name ?? '-';
+            $this->collegeName = $department->college?->name ?? '-';
+            $this->departmentName = $department->name;
+
+            $this->departments = [[
+                'label' => $this->departmentName,
+                'value' => $this->departmentId,
+            ]];
+        }
+
+        $this->setScopedFormDefaults();
     }
 
     public function create()
@@ -57,6 +103,7 @@ new class extends Component
 
         $this->resetValidation();
         $this->form->resetForm();
+        $this->setScopedFormDefaults();
         $this->createModal = true;
     }
 
@@ -65,6 +112,22 @@ new class extends Component
         $this->ensureCanManage('faculty_profiles.create');
 
         try {
+            $this->setScopedFormDefaults();
+
+            if ($this->scope === 'college') {
+                $selectedDepartment = Department::query()
+                    ->where('college_id', $this->collegeId)
+                    ->findOrFail((int) $this->form->department_id);
+
+                $this->form->campus_id = (int) $selectedDepartment->campus_id;
+                $this->form->college_id = (int) $selectedDepartment->college_id;
+                $this->form->department_id = (int) $selectedDepartment->id;
+            } else {
+                $this->form->campus_id = $this->campusId;
+                $this->form->college_id = $this->collegeId;
+                $this->form->department_id = $this->departmentId;
+            }
+
             $this->form->validateForm();
             $assignment = $this->form->resolveAcademicAssignment();
 
@@ -153,6 +216,28 @@ new class extends Component
         }
     }
 
+    public function updatedFormDepartmentId($value): void
+    {
+        if ($this->scope !== 'college') {
+            return;
+        }
+
+        $departmentId = is_array($value)
+            ? (int) ($value['value'] ?? 0)
+            : (int) $value;
+
+        $department = Department::query()
+            ->where('college_id', $this->collegeId)
+            ->find($departmentId);
+
+        if (! $department) {
+            return;
+        }
+
+        $this->departmentId = (int) $department->id;
+        $this->departmentName = $department->name;
+    }
+
     #[Computed]
     public function pageContext(): array
     {
@@ -166,7 +251,7 @@ new class extends Component
     #[Computed]
     public function stats(): array
     {
-        $baseQuery = FacultyProfile::query();
+        $baseQuery = $this->scopedFacultyQuery();
 
         return [
             'total' => (clone $baseQuery)->count(),
@@ -177,7 +262,109 @@ new class extends Component
 
     public function facultyRouteContext(): string
     {
-        return request()->routeIs('college-faculty-profiles.*') ? 'college' : 'department';
+        if (request()->routeIs('college-faculty-profiles.*')) {
+            return 'college';
+        }
+
+        if (request()->routeIs('faculty-profiles.*')) {
+            return 'department';
+        }
+
+        $user = auth()->guard()->user()?->loadMissing(['employeeProfile', 'facultyProfile']);
+
+        if ($user?->canAccessCollegeFacultyProfiles() && ! $user?->canAccessDepartmentFacultyProfiles()) {
+            return 'college';
+        }
+
+        return 'department';
+    }
+
+    protected function setScopedFormDefaults(): void
+    {
+        $this->form->campus_id = $this->campusId;
+        $this->form->college_id = $this->collegeId;
+
+        if ($this->scope === 'department') {
+            $this->form->department_id = $this->departmentId;
+
+            return;
+        }
+
+        if (! filled($this->form->department_id) && filled($this->departmentId)) {
+            $this->form->department_id = $this->departmentId;
+        }
+    }
+
+    protected function currentCollege(): College
+    {
+        $user = auth()->guard()->user()?->loadMissing([
+            'employeeProfile.college',
+            'employeeProfile.campus',
+            'facultyProfile.college',
+            'facultyProfile.campus',
+        ]);
+
+        abort_unless($user?->canAccessCollegeFacultyProfiles(), 403);
+
+        $profile = $user?->assignedAcademicProfile();
+
+        abort_unless(filled($profile?->college_id), 403);
+
+        return College::query()
+            ->with('campus')
+            ->findOrFail((int) $profile->college_id);
+    }
+
+    protected function currentDepartment(): Department
+    {
+        $user = auth()->guard()->user()?->loadMissing([
+            'employeeProfile.department',
+            'employeeProfile.college',
+            'employeeProfile.campus',
+            'facultyProfile.department',
+            'facultyProfile.college',
+            'facultyProfile.campus',
+        ]);
+
+        abort_unless($user?->canAccessDepartmentFacultyProfiles(), 403);
+
+        $profile = $user?->assignedAcademicProfile();
+
+        abort_unless(filled($profile?->department_id), 403);
+
+        return Department::query()
+            ->with(['campus', 'college'])
+            ->findOrFail((int) $profile->department_id);
+    }
+
+    protected function departmentOptionsForCollege(int $collegeId): array
+    {
+        return Department::query()
+            ->where('college_id', $collegeId)
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(fn (Department $department) => [
+                'label' => $department->name,
+                'value' => (int) $department->id,
+            ])
+            ->values()
+            ->toArray();
+    }
+
+    protected function scopedFacultyQuery(): Builder
+    {
+        $query = FacultyProfile::query();
+
+        if ($this->scope === 'college' && filled($this->collegeId)) {
+            return $query->where('college_id', $this->collegeId);
+        }
+
+        if ($this->scope === 'department' && filled($this->departmentId)) {
+            return $query->where('department_id', $this->departmentId);
+        }
+
+        return $query->whereRaw('1 = 0');
     }
 };
 ?>
@@ -187,7 +374,11 @@ new class extends Component
         <div class="space-y-1">
             <h1 class="text-xl font-semibold text-zinc-900 dark:text-white">Faculty Profiles</h1>
             <p class="text-sm text-zinc-500 dark:text-zinc-400">
-                Manage all faculty records from one full list, with actions controlled only by assigned permissions.
+                @if ($scope === 'college')
+                    Managing faculty profiles under {{ $collegeName }}, {{ $campusName }}.
+                @else
+                    Managing faculty profiles for {{ $departmentName }} under {{ $collegeName }}, {{ $campusName }}.
+                @endif
             </p>
         </div>
 
@@ -227,7 +418,10 @@ new class extends Component
     </x-card>
 
     <x-card>
-        <livewire:tables.admin.faculty-profiles-table :context="$this->facultyRouteContext()" />
+        <livewire:tables.admin.faculty-profiles-table
+            :context="$scope"
+            :college-id="$collegeId"
+            :department-id="$departmentId" />
     </x-card>
 
     <x-modal wire="createModal" title="New Faculty" size="4xl">
@@ -253,14 +447,15 @@ new class extends Component
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <x-select.styled label="Campus" wire:model.live="form.campus_id" :options="$this->campuses"
-                    select="label:label|value:value" />
+                <x-input label="Campus" :value="$campusName" disabled />
+                <x-input label="College" :value="$collegeName" disabled />
 
-                <x-select.styled label="College" wire:model.live="form.college_id" :options="$colleges"
-                    select="label:label|value:value" />
-
-                <x-select.styled label="Department" wire:model="form.department_id" :options="$departments"
-                    select="label:label|value:value" />
+                @if ($scope === 'college')
+                    <x-select.styled label="Department" wire:model="form.department_id" :options="$departments"
+                        select="label:label|value:value" />
+                @else
+                    <x-input label="Department" :value="$departmentName" disabled />
+                @endif
             </div>
 
             <x-input label="Academic Rank" wire:model="form.academic_rank" />

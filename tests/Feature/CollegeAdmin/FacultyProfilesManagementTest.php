@@ -94,7 +94,7 @@ describe('college admin faculty profiles management', function () {
             ->and($createdUser->facultyProfile->department_id)->toBe($this->secondaryDepartment->id);
     });
 
-    it('allows faculty creation outside the previous managed college scope when the department is valid', function () {
+    it('rejects out-of-scope department selections during creation', function () {
         $outsideCampus = Campus::factory()->create();
         $outsideCollege = College::factory()->forCampus($outsideCampus)->create();
         $outsideDepartment = Department::factory()->forCollege($outsideCollege)->create();
@@ -105,17 +105,16 @@ describe('college admin faculty profiles management', function () {
             ->set('form.first_name', 'Kris')
             ->set('form.last_name', 'Tan')
             ->set('form.email', 'kris.tan@example.test')
-            ->set('form.campus_id', $outsideCampus->id)
-            ->set('form.college_id', $outsideCollege->id)
             ->set('form.department_id', $outsideDepartment->id)
             ->call('save')
             ->assertHasNoErrors();
 
-        expect(User::query()->where('email', 'kris.tan@example.test')->first()?->facultyProfile?->department_id)
-            ->toBe($outsideDepartment->id);
+        $createdUser = User::query()->where('email', 'kris.tan@example.test')->first();
+
+        expect($createdUser)->toBeNull();
     });
 
-    it('allows access to faculty profiles outside the previous managed college scope', function () {
+    it('forbids access to faculty profiles outside the managed college scope', function () {
         $outsideCampus = Campus::factory()->create();
         $outsideCollege = College::factory()->forCampus($outsideCampus)->create();
         $outsideDepartment = Department::factory()->forCollege($outsideCollege)->create();
@@ -123,7 +122,6 @@ describe('college admin faculty profiles management', function () {
 
         $this->actingAs($this->user)
             ->get(route('college-faculty-profiles.show', $outsideProfile))
-            ->assertOk()
-            ->assertSee($outsideProfile->email);
+            ->assertNotFound();
     });
 });

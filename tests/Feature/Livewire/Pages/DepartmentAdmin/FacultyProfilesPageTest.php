@@ -3,6 +3,7 @@
 use App\Models\Campus;
 use App\Models\College;
 use App\Models\Department;
+use App\Models\EmployeeProfile;
 use App\Models\FacultyProfile;
 use App\Models\User;
 use Livewire\Livewire;
@@ -19,18 +20,19 @@ describe('department admin faculty profiles page', function () {
         $this->campus = Campus::factory()->create();
         $this->college = College::factory()->forCampus($this->campus)->create();
         $this->department = Department::factory()->forCollege($this->college)->create();
+
+        EmployeeProfile::factory()->forDepartment($this->department)->create([
+            'user_id' => $this->user->id,
+        ]);
     });
 
-    it('loads dependent colleges and departments when the academic assignment changes', function () {
+    it('initializes scoped assignment defaults for dept admins', function () {
         Livewire::actingAs($this->user)
             ->test('pages::dept-admin.faculty-profiles.index')
             ->call('create')
-            ->set('form.campus_id', $this->campus->id)
-            ->assertSet('form.college_id', null)
-            ->assertSet('form.department_id', null)
-            ->set('form.college_id', $this->college->id)
-            ->assertSet('form.department_id', null)
-            ->assertCount('colleges', 1)
+            ->assertSet('form.campus_id', $this->campus->id)
+            ->assertSet('form.college_id', $this->college->id)
+            ->assertSet('form.department_id', $this->department->id)
             ->assertCount('departments', 1);
     });
 
@@ -42,9 +44,6 @@ describe('department admin faculty profiles page', function () {
             ->set('form.middle_name', 'N')
             ->set('form.last_name', 'Reyes')
             ->set('form.email', 'mara.reyes@example.test')
-            ->set('form.campus_id', $this->campus->id)
-            ->set('form.college_id', $this->college->id)
-            ->set('form.department_id', $this->department->id)
             ->set('form.academic_rank', 'Assistant Professor I')
             ->set('form.contactno', '09181234567')
             ->set('form.sex', 'Female')
@@ -63,25 +62,14 @@ describe('department admin faculty profiles page', function () {
             ->and($createdUser->facultyProfile->academic_rank)->toBe('Assistant Professor I');
     });
 
-    it('supports dept admins with permissions even without a management profile', function () {
+    it('forbids dept admins without a department assignment from accessing the page', function () {
         $facultyOnlyAdmin = actingUserWithPermissions([
             'faculty_profiles.view',
             'faculty_profiles.create',
         ], ['deptAdmin']);
 
-        Livewire::actingAs($facultyOnlyAdmin)
-            ->test('pages::dept-admin.faculty-profiles.index')
-            ->call('create')
-            ->set('form.first_name', 'Lara')
-            ->set('form.last_name', 'Cruz')
-            ->set('form.email', 'lara.cruz@example.test')
-            ->set('form.campus_id', $this->campus->id)
-            ->set('form.college_id', $this->college->id)
-            ->set('form.department_id', $this->department->id)
-            ->call('save')
-            ->assertHasNoErrors();
-
-        expect(User::query()->where('email', 'lara.cruz@example.test')->first()?->facultyProfile?->department_id)
-            ->toBe($this->department->id);
+        $this->actingAs($facultyOnlyAdmin)
+            ->get(route('faculty-profiles.index'))
+            ->assertForbidden();
     });
 });
