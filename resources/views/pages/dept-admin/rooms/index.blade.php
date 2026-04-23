@@ -1,7 +1,7 @@
 <?php
 
-use App\Imports\RoomsImport;
 use App\Enums\RoomStatusEnum;
+use App\Imports\RoomsImport;
 use App\Livewire\Forms\Admin\RoomForm;
 use App\Models\College;
 use App\Models\Department;
@@ -14,8 +14,7 @@ use Livewire\WithFileUploads;
 use Maatwebsite\Excel\Facades\Excel;
 use TallStackUi\Traits\Interactions;
 
-new class extends Component
-{
+new class extends Component {
     use CanManage, Interactions, WithFileUploads;
 
     public RoomForm $form;
@@ -38,7 +37,11 @@ new class extends Component
 
     public string $campusName = '';
 
+    public string $collegeCode = '';
+
     public string $collegeName = '';
+
+    public string $departmentCode = '';
 
     public string $departmentName = '';
 
@@ -48,9 +51,7 @@ new class extends Component
     {
         $this->ensureCanManage('rooms.view');
 
-        $this->scope = request()->routeIs('college-rooms.*')
-            ? 'college'
-            : 'department';
+        $this->scope = request()->routeIs('college-rooms.*') ? 'college' : 'department';
 
         $department = $this->currentDepartment();
 
@@ -59,6 +60,7 @@ new class extends Component
         if ($this->scope === 'college') {
             $college = $this->currentCollege();
             $this->collegeId = (int) $college->id;
+            $this->collegeCode = $college->code ?? '-';
             $this->collegeName = $college->name;
             $this->campusId = (int) $college->campus_id;
             $this->campusName = $college->campus?->name ?? '-';
@@ -82,12 +84,7 @@ new class extends Component
     #[Computed]
     public function stats(): array
     {
-        $baseQuery = Room::query()
-            ->when(
-                $this->scope === 'college',
-                fn ($query) => $query->where('college_id', $this->collegeId),
-                fn ($query) => $query->where('department_id', $this->departmentId)
-            );
+        $baseQuery = Room::query()->when($this->scope === 'college', fn($query) => $query->where('college_id', $this->collegeId), fn($query) => $query->where('department_id', $this->departmentId));
 
         return [
             'total' => (clone $baseQuery)->count(),
@@ -201,17 +198,10 @@ new class extends Component
         $user = auth()
             ->guard()
             ->user()
-            ?->loadMissing([
-                'employeeProfile.college',
-                'employeeProfile.campus',
-                'facultyProfile.college',
-                'facultyProfile.campus',
-            ]);
+            ?->loadMissing(['employeeProfile.college', 'employeeProfile.campus', 'facultyProfile.college', 'facultyProfile.campus']);
         $profile = $user?->employeeProfile ?? $user?->facultyProfile;
 
-        $query = College::query()
-            ->with('campus')
-            ->orderBy('name');
+        $query = College::query()->with('campus')->orderBy('name');
 
         if (filled($profile?->college_id)) {
             return $query->findOrFail($profile->college_id);
@@ -225,11 +215,13 @@ new class extends Component
         $this->departmentOptions = Department::query()
             ->where('college_id', $this->collegeId)
             ->orderBy('name')
-            ->get(['id', 'name'])
-            ->map(fn (Department $department) => [
-                'label' => $department->name,
-                'value' => (int) $department->id,
-            ])
+            ->get(['id', 'code', 'name'])
+            ->map(
+                fn(Department $department) => [
+                    'label' => filled($department->code) ? $department->code . ' - ' . $department->name : $department->name,
+                    'value' => (int) $department->id,
+                ],
+            )
             ->values()
             ->toArray();
     }
@@ -260,7 +252,9 @@ new class extends Component
         $this->collegeId = (int) $department->college_id;
         $this->departmentId = (int) $department->id;
         $this->campusName = $department->campus?->name ?? '-';
+        $this->collegeCode = $department->college?->code ?? '-';
         $this->collegeName = $department->college?->name ?? '-';
+        $this->departmentCode = $department->code ?? '-';
         $this->departmentName = $department->name;
     }
 
@@ -280,7 +274,7 @@ new class extends Component
         <div>
             <div class="flex items-center gap-2">
                 <h1 class="text-xl font-bold dark:text-white">
-                    {{ $scope === 'college' ? $collegeName : $departmentName }}
+                    {{ $scope === 'college' ? $collegeCode : $departmentCode }}
                 </h1>
                 <x-badge :text="$scope === 'college' ? 'College Scope' : 'Department Scope'" color="blue" round />
             </div>
@@ -296,16 +290,40 @@ new class extends Component
 
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <x-card>
-            <p class="text-sm font-medium text-zinc-500 dark:text-zinc-400">Total Rooms</p>
-            <p class="mt-1 text-2xl font-bold text-zinc-900 dark:text-white">{{ $this->stats['total'] }}</p>
+            <div class="flex items-start justify-between gap-3">
+                <div>
+                    <p class="text-sm font-medium text-zinc-500 dark:text-zinc-400">Total Rooms</p>
+                    <p class="mt-1 text-2xl font-bold text-zinc-900 dark:text-white">{{ $this->stats['total'] }}</p>
+                </div>
+
+                <div class="rounded-lg bg-blue-50 p-2 text-blue-600 dark:bg-blue-950/40 dark:text-blue-300">
+                    <x-icon icon="home-modern" class="h-5 w-5" />
+                </div>
+            </div>
         </x-card>
         <x-card>
-            <p class="text-sm font-medium text-zinc-500 dark:text-zinc-400">Active</p>
-            <p class="mt-1 text-2xl font-bold text-green-600">{{ $this->stats['active'] }}</p>
+            <div class="flex items-start justify-between gap-3">
+                <div>
+                    <p class="text-sm font-medium text-zinc-500 dark:text-zinc-400">Active</p>
+                    <p class="mt-1 text-2xl font-bold text-green-600">{{ $this->stats['active'] }}</p>
+                </div>
+
+                <div class="rounded-lg bg-green-50 p-2 text-green-600 dark:bg-green-950/40 dark:text-green-300">
+                    <x-icon icon="check-circle" class="h-5 w-5" />
+                </div>
+            </div>
         </x-card>
         <x-card>
-            <p class="text-sm font-medium text-zinc-500 dark:text-zinc-400">Useable</p>
-            <p class="mt-1 text-2xl font-bold text-zinc-900 dark:text-white">{{ $this->stats['useable'] }}</p>
+            <div class="flex items-start justify-between gap-3">
+                <div>
+                    <p class="text-sm font-medium text-zinc-500 dark:text-zinc-400">Useable</p>
+                    <p class="mt-1 text-2xl font-bold text-zinc-900 dark:text-white">{{ $this->stats['useable'] }}</p>
+                </div>
+
+                <div class="rounded-lg bg-emerald-50 p-2 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-300">
+                    <x-icon icon="hand-thumb-up" class="h-5 w-5" />
+                </div>
+            </div>
         </x-card>
     </div>
 
@@ -327,10 +345,7 @@ new class extends Component
         </div>
 
         <div class="p-6">
-            <livewire:tables.admin.rooms-table
-                :scope="$scope"
-                :college-id="$collegeId"
-                :department-id="$departmentId" />
+            <livewire:tables.admin.rooms-table :scope="$scope" :college-id="$collegeId" :department-id="$departmentId" />
         </div>
     </x-card>
 
@@ -338,15 +353,12 @@ new class extends Component
         <div class="space-y-4">
             <div class="grid gap-4 md:grid-cols-2">
                 <x-input label="Campus" :value="$campusName" disabled />
-                <x-input label="College" :value="$collegeName" disabled />
+                <x-input label="College" :value="filled($collegeCode) && $collegeCode !== '-' ? $collegeCode . ' - ' . $collegeName : $collegeName" disabled />
                 @if ($scope === 'college')
-                    <x-select.styled
-                        label="Department"
-                        wire:model="form.department_id"
-                        :options="$departmentOptions"
+                    <x-select.styled label="Department" wire:model="form.department_id" :options="$departmentOptions"
                         select="label:label|value:value" />
                 @else
-                    <x-input label="Department" :value="$departmentName" disabled />
+                    <x-input label="Department" :value="filled($departmentCode) && $departmentCode !== '-' ? $departmentCode . ' - ' . $departmentName : $departmentName" disabled />
                 @endif
                 <x-input label="Room Name" wire:model="form.name" />
                 <x-input label="Floor No." wire:model="form.floor_no" />
@@ -388,7 +400,9 @@ new class extends Component
         <div class="space-y-4">
             <x-upload wire:model="importFile" label="Select Excel/CSV File" hint="Supported files: .xlsx, .csv" />
             <p class="text-xs text-zinc-500">
-                Imported rooms will be assigned to {{ $departmentName }} automatically.
+                Imported rooms will be assigned to
+                {{ filled($departmentCode) && $departmentCode !== '-' ? $departmentCode . ' - ' . $departmentName : $departmentName }}
+                automatically.
                 Recommended headers: name, floor_no, room_no, type, description, location, is_active, status
             </p>
         </div>

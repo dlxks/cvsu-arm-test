@@ -101,16 +101,40 @@ new class extends Component {
 
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <x-card>
-            <p class="text-sm font-medium text-zinc-500 dark:text-zinc-400">Total Permissions</p>
-            <p class="mt-1 text-2xl font-bold text-zinc-900 dark:text-white">{{ $this->stats['total'] }}</p>
+            <div class="flex items-start justify-between gap-3">
+                <div>
+                    <p class="text-sm font-medium text-zinc-500 dark:text-zinc-400">Total Permissions</p>
+                    <p class="mt-1 text-2xl font-bold text-zinc-900 dark:text-white">{{ $this->stats['total'] }}</p>
+                </div>
+
+                <div class="rounded-lg bg-blue-50 p-2 text-blue-600 dark:bg-blue-950/40 dark:text-blue-300">
+                    <x-icon icon="key" class="h-5 w-5" />
+                </div>
+            </div>
         </x-card>
         <x-card>
-            <p class="text-sm font-medium text-zinc-500 dark:text-zinc-400">Assigned to Roles</p>
-            <p class="mt-1 text-2xl font-bold text-zinc-900 dark:text-white">{{ $this->stats['assigned'] }}</p>
+            <div class="flex items-start justify-between gap-3">
+                <div>
+                    <p class="text-sm font-medium text-zinc-500 dark:text-zinc-400">Assigned to Roles</p>
+                    <p class="mt-1 text-2xl font-bold text-zinc-900 dark:text-white">{{ $this->stats['assigned'] }}</p>
+                </div>
+
+                <div class="rounded-lg bg-emerald-50 p-2 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-300">
+                    <x-icon icon="shield-check" class="h-5 w-5" />
+                </div>
+            </div>
         </x-card>
         <x-card>
-            <p class="text-sm font-medium text-zinc-500 dark:text-zinc-400">Guards</p>
-            <p class="mt-1 text-2xl font-bold text-zinc-900 dark:text-white">{{ $this->stats['guards'] }}</p>
+            <div class="flex items-start justify-between gap-3">
+                <div>
+                    <p class="text-sm font-medium text-zinc-500 dark:text-zinc-400">Guards</p>
+                    <p class="mt-1 text-2xl font-bold text-zinc-900 dark:text-white">{{ $this->stats['guards'] }}</p>
+                </div>
+
+                <div class="rounded-lg bg-amber-50 p-2 text-amber-600 dark:bg-amber-950/40 dark:text-amber-300">
+                    <x-icon icon="lock-closed" class="h-5 w-5" />
+                </div>
+            </div>
         </x-card>
     </div>
 

@@ -99,16 +99,40 @@ new class extends Component {
     {{-- Stats Cards --}}
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <x-card>
-            <p class="text-sm font-medium text-zinc-500 dark:text-zinc-400">Total Campuses</p>
-            <p class="mt-1 text-2xl font-bold text-zinc-900 dark:text-white">{{ $this->stats['total'] }}</p>
+            <div class="flex items-start justify-between gap-3">
+                <div>
+                    <p class="text-sm font-medium text-zinc-500 dark:text-zinc-400">Total Campuses</p>
+                    <p class="mt-1 text-2xl font-bold text-zinc-900 dark:text-white">{{ $this->stats['total'] }}</p>
+                </div>
+
+                <div class="rounded-lg bg-blue-50 p-2 text-blue-600 dark:bg-blue-950/40 dark:text-blue-300">
+                    <x-icon icon="map-pin" class="h-5 w-5" />
+                </div>
+            </div>
         </x-card>
         <x-card>
-            <p class="text-sm font-medium text-zinc-500 dark:text-zinc-400">Active</p>
-            <p class="mt-1 text-2xl font-bold text-green-600">{{ $this->stats['active'] }}</p>
+            <div class="flex items-start justify-between gap-3">
+                <div>
+                    <p class="text-sm font-medium text-zinc-500 dark:text-zinc-400">Active</p>
+                    <p class="mt-1 text-2xl font-bold text-green-600">{{ $this->stats['active'] }}</p>
+                </div>
+
+                <div class="rounded-lg bg-green-50 p-2 text-green-600 dark:bg-green-950/40 dark:text-green-300">
+                    <x-icon icon="check-circle" class="h-5 w-5" />
+                </div>
+            </div>
         </x-card>
         <x-card>
-            <p class="text-sm font-medium text-zinc-500 dark:text-zinc-400">Inactive</p>
-            <p class="mt-1 text-2xl font-bold text-red-500">{{ $this->stats['inactive'] }}</p>
+            <div class="flex items-start justify-between gap-3">
+                <div>
+                    <p class="text-sm font-medium text-zinc-500 dark:text-zinc-400">Inactive</p>
+                    <p class="mt-1 text-2xl font-bold text-red-500">{{ $this->stats['inactive'] }}</p>
+                </div>
+
+                <div class="rounded-lg bg-red-50 p-2 text-red-600 dark:bg-red-950/40 dark:text-red-300">
+                    <x-icon icon="x-circle" class="h-5 w-5" />
+                </div>
+            </div>
         </x-card>
     </div>
 

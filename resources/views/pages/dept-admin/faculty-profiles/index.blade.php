@@ -45,7 +45,11 @@ new class extends Component {
 
     public string $campusName = '-';
 
+    public string $collegeCode = '-';
+
     public string $collegeName = '-';
+
+    public string $departmentCode = '-';
 
     public string $departmentName = '-';
 
@@ -71,11 +75,17 @@ new class extends Component {
             $this->campusId = (int) $college->campus_id;
             $this->collegeId = (int) $college->id;
             $this->campusName = $college->campus?->name ?? '-';
+            $this->collegeCode = $college->code ?? '-';
             $this->collegeName = $college->name;
 
             $this->departments = $this->departmentOptionsForCollege($this->collegeId);
             $this->departmentId = (int) ($this->departments[0]['value'] ?? 0) ?: null;
-            $this->departmentName = collect($this->departments)->firstWhere('value', $this->departmentId)['label'] ?? '-';
+            $selectedDepartment = Department::query()
+                ->where('college_id', $this->collegeId)
+                ->find($this->departmentId);
+
+            $this->departmentCode = $selectedDepartment?->code ?? '-';
+            $this->departmentName = $selectedDepartment?->name ?? '-';
         } else {
             $department = $this->currentDepartment();
 
@@ -83,12 +93,16 @@ new class extends Component {
             $this->collegeId = (int) $department->college_id;
             $this->departmentId = (int) $department->id;
             $this->campusName = $department->campus?->name ?? '-';
+            $this->collegeCode = $department->college?->code ?? '-';
             $this->collegeName = $department->college?->name ?? '-';
+            $this->departmentCode = $department->code ?? '-';
             $this->departmentName = $department->name;
 
             $this->departments = [
                 [
-                    'label' => $this->departmentName,
+                    'label' => filled($this->departmentCode) && $this->departmentCode !== '-'
+                        ? $this->departmentCode . ' - ' . $this->departmentName
+                        : $this->departmentName,
                     'value' => $this->departmentId,
                 ],
             ];
@@ -229,6 +243,7 @@ new class extends Component {
         }
 
         $this->departmentId = (int) $department->id;
+        $this->departmentCode = $department->code ?? '-';
         $this->departmentName = $department->name;
     }
 
@@ -322,10 +337,10 @@ new class extends Component {
             ->where('college_id', $collegeId)
             ->where('is_active', true)
             ->orderBy('name')
-            ->get(['id', 'name'])
+            ->get(['id', 'code', 'name'])
             ->map(
                 fn(Department $department) => [
-                    'label' => $department->name,
+                    'label' => filled($department->code) ? $department->code . ' - ' . $department->name : $department->name,
                     'value' => (int) $department->id,
                 ],
             )
@@ -355,7 +370,7 @@ new class extends Component {
         <div>
             <div class="flex items-center gap-2">
                 <h1 class="text-xl font-bold dark:text-white">
-                    {{ $scope === 'college' ? $collegeName : $departmentName }}
+                    {{ $scope === 'college' ? $collegeCode : $departmentCode }}
                 </h1>
                 <x-badge :text="$scope === 'college' ? 'College Scope' : 'Department Scope'" color="blue" round />
             </div>
@@ -372,16 +387,40 @@ new class extends Component {
 
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <x-card>
-            <p class="text-sm font-medium text-zinc-500 dark:text-zinc-400">Total Faculty</p>
-            <p class="mt-1 text-2xl font-bold text-zinc-900 dark:text-white">{{ $this->stats['total'] }}</p>
+            <div class="flex items-start justify-between gap-3">
+                <div>
+                    <p class="text-sm font-medium text-zinc-500 dark:text-zinc-400">Total Faculty</p>
+                    <p class="mt-1 text-2xl font-bold text-zinc-900 dark:text-white">{{ $this->stats['total'] }}</p>
+                </div>
+
+                <div class="rounded-lg bg-blue-50 p-2 text-blue-600 dark:bg-blue-950/40 dark:text-blue-300">
+                    <x-icon icon="users" class="h-5 w-5" />
+                </div>
+            </div>
         </x-card>
         <x-card>
-            <p class="text-sm font-medium text-zinc-500 dark:text-zinc-400">With Rank</p>
-            <p class="mt-1 text-2xl font-bold text-zinc-900 dark:text-white">{{ $this->stats['ranked'] }}</p>
+            <div class="flex items-start justify-between gap-3">
+                <div>
+                    <p class="text-sm font-medium text-zinc-500 dark:text-zinc-400">With Rank</p>
+                    <p class="mt-1 text-2xl font-bold text-zinc-900 dark:text-white">{{ $this->stats['ranked'] }}</p>
+                </div>
+
+                <div class="rounded-lg bg-violet-50 p-2 text-violet-600 dark:bg-violet-950/40 dark:text-violet-300">
+                    <x-icon icon="academic-cap" class="h-5 w-5" />
+                </div>
+            </div>
         </x-card>
         <x-card>
-            <p class="text-sm font-medium text-zinc-500 dark:text-zinc-400">Departments</p>
-            <p class="mt-1 text-2xl font-bold text-zinc-900 dark:text-white">{{ $this->stats['departments'] }}</p>
+            <div class="flex items-start justify-between gap-3">
+                <div>
+                    <p class="text-sm font-medium text-zinc-500 dark:text-zinc-400">Departments</p>
+                    <p class="mt-1 text-2xl font-bold text-zinc-900 dark:text-white">{{ $this->stats['departments'] }}</p>
+                </div>
+
+                <div class="rounded-lg bg-cyan-50 p-2 text-cyan-600 dark:bg-cyan-950/40 dark:text-cyan-300">
+                    <x-icon icon="building-office-2" class="h-5 w-5" />
+                </div>
+            </div>
         </x-card>
     </div>
 
@@ -434,13 +473,13 @@ new class extends Component {
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <x-input label="Campus" :value="$campusName" disabled />
-                <x-input label="College" :value="$collegeName" disabled />
+                <x-input label="College" :value="filled($collegeCode) && $collegeCode !== '-' ? $collegeCode . ' - ' . $collegeName : $collegeName" disabled />
 
                 @if ($scope === 'college')
                     <x-select.styled label="Department" wire:model="form.department_id" :options="$departments"
                         select="label:label|value:value" />
                 @else
-                    <x-input label="Department" :value="$departmentName" disabled />
+                    <x-input label="Department" :value="filled($departmentCode) && $departmentCode !== '-' ? $departmentCode . ' - ' . $departmentName : $departmentName" disabled />
                 @endif
             </div>
 

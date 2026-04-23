@@ -11,7 +11,8 @@ use Livewire\Attributes\Computed;
 use Livewire\Component;
 use TallStackUi\Traits\Interactions;
 
-new class extends Component {
+new class extends Component
+{
     use CanManage, HasDepartmentManagement, Interactions;
 
     public College $college;
@@ -70,25 +71,45 @@ new class extends Component {
             @can('colleges.update')
                 <x-button wire:click="editCollege" sm color="primary" icon="pencil" text="Edit Details" />
             @endcan
-
-            @can('departments.view')
-                <x-button tag="a" href="{{ route('dashboard.resolve') }}" sm outline text="Back to Dashboard" />
-            @endcan
         </div>
     </div>
 
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <x-card>
-            <p class="text-sm font-medium text-zinc-500 dark:text-zinc-400">Total Departments</p>
-            <p class="mt-1 text-2xl font-bold text-zinc-900 dark:text-white">{{ $this->stats['total'] }}</p>
+            <div class="flex items-start justify-between gap-3">
+                <div>
+                    <p class="text-sm font-medium text-zinc-500 dark:text-zinc-400">Total Departments</p>
+                    <p class="mt-1 text-2xl font-bold text-zinc-900 dark:text-white">{{ $this->stats['total'] }}</p>
+                </div>
+
+                <div class="rounded-lg bg-blue-50 p-2 text-blue-600 dark:bg-blue-950/40 dark:text-blue-300">
+                    <x-icon icon="building-office-2" class="h-5 w-5" />
+                </div>
+            </div>
         </x-card>
         <x-card>
-            <p class="text-sm font-medium text-zinc-500 dark:text-zinc-400">Active</p>
-            <p class="mt-1 text-2xl font-bold text-green-600">{{ $this->stats['active'] }}</p>
+            <div class="flex items-start justify-between gap-3">
+                <div>
+                    <p class="text-sm font-medium text-zinc-500 dark:text-zinc-400">Active</p>
+                    <p class="mt-1 text-2xl font-bold text-green-600">{{ $this->stats['active'] }}</p>
+                </div>
+
+                <div class="rounded-lg bg-green-50 p-2 text-green-600 dark:bg-green-950/40 dark:text-green-300">
+                    <x-icon icon="check-circle" class="h-5 w-5" />
+                </div>
+            </div>
         </x-card>
         <x-card>
-            <p class="text-sm font-medium text-zinc-500 dark:text-zinc-400">Inactive</p>
-            <p class="mt-1 text-2xl font-bold text-red-500">{{ $this->stats['inactive'] }}</p>
+            <div class="flex items-start justify-between gap-3">
+                <div>
+                    <p class="text-sm font-medium text-zinc-500 dark:text-zinc-400">Inactive</p>
+                    <p class="mt-1 text-2xl font-bold text-red-500">{{ $this->stats['inactive'] }}</p>
+                </div>
+
+                <div class="rounded-lg bg-red-50 p-2 text-red-600 dark:bg-red-950/40 dark:text-red-300">
+                    <x-icon icon="x-circle" class="h-5 w-5" />
+                </div>
+            </div>
         </x-card>
     </div>
 
