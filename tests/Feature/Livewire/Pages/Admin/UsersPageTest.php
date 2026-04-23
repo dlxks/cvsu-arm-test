@@ -4,6 +4,7 @@ use App\Models\Campus;
 use App\Models\College;
 use App\Models\Department;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 
 describe('admin users pages', function () {
@@ -113,5 +114,19 @@ describe('admin users pages', function () {
             ->and($freshUser->employeeProfile)->not->toBeNull()
             ->and($freshUser->facultyProfile->academic_rank)->toBe('Associate Professor I')
             ->and($freshUser->employeeProfile->position)->toBe('Department Chair');
+    });
+
+    it('renders account timestamps in Philippine time on the user detail page', function () {
+        $managedUser = User::factory()->faculty()->create();
+
+        DB::table('users')->where('id', $managedUser->id)->update([
+            'created_at' => '2026-04-23 10:51:41',
+            'updated_at' => '2026-04-23 11:31:21',
+        ]);
+
+        Livewire::actingAs($this->user)
+            ->test('pages::admin.users.show', ['user' => $managedUser->fresh()])
+            ->assertSee('Apr 23, 2026 10:51 AM')
+            ->assertSee('Apr 23, 2026 11:31 AM');
     });
 });

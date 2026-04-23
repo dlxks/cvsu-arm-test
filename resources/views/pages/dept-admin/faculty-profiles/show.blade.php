@@ -390,13 +390,13 @@ new class extends Component
                 <div>
                     <p class="text-xs font-medium uppercase tracking-wide text-zinc-400">Created</p>
                     <p class="mt-2 text-sm text-zinc-700 dark:text-zinc-100">
-                        {{ $facultyProfile->created_at?->format('M d, Y h:i A') }}</p>
+                        {{ $facultyProfile->created_at?->timezone(config('app.timezone'))->format('M d, Y h:i A') }}</p>
                 </div>
 
                 <div>
                     <p class="text-xs font-medium uppercase tracking-wide text-zinc-400">Last Updated</p>
                     <p class="mt-2 text-sm text-zinc-700 dark:text-zinc-100">
-                        {{ $facultyProfile->updated_at?->format('M d, Y h:i A') }}</p>
+                        {{ $facultyProfile->updated_at?->timezone(config('app.timezone'))->format('M d, Y h:i A') }}</p>
                 </div>
 
                 <div class="md:col-span-2">
