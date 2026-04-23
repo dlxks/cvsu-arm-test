@@ -180,7 +180,7 @@ new class extends Component
             return 'department';
         }
 
-        $user = auth()->guard()->user()?->loadMissing(['employeeProfile', 'facultyProfile']);
+        $user = Auth::user()?->loadMissing(['employeeProfile', 'facultyProfile']);
 
         if ($user?->canAccessCollegeFacultyProfiles() && ! $user?->canAccessDepartmentFacultyProfiles()) {
             return 'college';
@@ -203,9 +203,7 @@ new class extends Component
 
     protected function resolveManagedScopeContext(): void
     {
-        $user = auth()
-            ->guard()
-            ->user()
+        $user = Auth::user()
             ?->loadMissing(['employeeProfile.department', 'employeeProfile.college', 'employeeProfile.campus', 'facultyProfile.department', 'facultyProfile.college', 'facultyProfile.campus']);
         $profile = $user?->assignedAcademicProfile();
         $scope = $this->routeContext();

@@ -6,6 +6,7 @@ use App\Models\Department;
 use App\Models\Program;
 use App\Models\Room;
 use App\Traits\CanManage;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 
@@ -20,9 +21,7 @@ new class extends Component {
     {
         $this->ensureCanManage('departments.view');
 
-        $user = auth()
-            ->guard()
-            ->user()
+        $user = Auth::user()
             ?->loadMissing(['employeeProfile.campus', 'employeeProfile.college', 'facultyProfile.campus', 'facultyProfile.college']);
         $profile = $user?->employeeProfile ?? $user?->facultyProfile;
 
@@ -107,7 +106,7 @@ new class extends Component {
             </div>
 
             <div>
-                @if (auth()->user()?->canAccessCollegeRooms())
+                @if (Auth::user()?->canAccessCollegeRooms())
                     <x-button tag="a" href="{{ route('college-rooms.index') }}" sm color="primary"
                         text="View Rooms" />
                 @else

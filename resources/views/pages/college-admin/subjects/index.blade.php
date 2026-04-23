@@ -11,6 +11,7 @@ use App\Models\SubjectUserAction;
 use App\Support\SubjectDuplicateDetector;
 use App\Traits\CanManage;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
@@ -20,7 +21,8 @@ use Livewire\Attributes\On;
 use Livewire\Component;
 use TallStackUi\Traits\Interactions;
 
-new class extends Component {
+new class extends Component
+{
     use CanManage, Interactions;
 
     public Campus $campus;
@@ -72,7 +74,7 @@ new class extends Component {
                 ->count(),
             'drafts' => Subject::query()
                 ->where('status', Subject::STATUS_DRAFT)
-                ->where('created_by', auth()->id())
+                ->where('created_by', Auth::id())
                 ->count(),
         ];
     }
@@ -237,7 +239,7 @@ new class extends Component {
                         $this->subjectForm->payload($validated),
                         [
                             'status' => Subject::STATUS_DRAFT,
-                            'created_by' => auth()->id(),
+                            'created_by' => Auth::id(),
                         ]
                     ));
 
@@ -253,7 +255,7 @@ new class extends Component {
             $this->reopenSubjectModal();
 
             throw $e;
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             $this->reopenSubjectModal();
             Log::error('Subject Draft Save Failed: '.$e->getMessage());
             $this->toast()->error('Error', 'An unexpected error occurred while saving the draft subject.')->send();
@@ -348,7 +350,7 @@ new class extends Component {
 
                 $subject->update([
                     'status' => Subject::STATUS_SUBMITTED,
-                    'submitted_by' => auth()->id(),
+                    'submitted_by' => Auth::id(),
                     'submitted_at' => now(),
                 ]);
 
@@ -364,7 +366,7 @@ new class extends Component {
             $this->toast()->error('Duplicate detected', 'The subject matches an existing submitted subject and could not be submitted.')->send();
 
             throw $e;
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::error('Subject Submission Failed: '.$e->getMessage());
             $this->toast()->error('Error', 'An unexpected error occurred while submitting the subject.')->send();
         }
@@ -394,7 +396,7 @@ new class extends Component {
             $this->recordSubjectAction($subject, 'draft_deleted', 'Draft subject moved to trash.');
             $this->refreshSubjectTables();
             $this->toast()->success('Deleted', 'Draft subject moved to trash.')->send();
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::error('Draft Subject Deletion Failed: '.$e->getMessage());
             $this->toast()->error('Error', 'Failed to delete the draft subject.')->send();
         }
@@ -424,7 +426,7 @@ new class extends Component {
             $this->recordSubjectAction($subject, 'draft_restored', 'Draft subject restored from trash.');
             $this->refreshSubjectTables();
             $this->toast()->success('Restored', 'Draft subject restored successfully.')->send();
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::error('Draft Subject Restore Failed: '.$e->getMessage());
             $this->toast()->error('Error', 'Failed to restore the draft subject.')->send();
         }
@@ -459,7 +461,7 @@ new class extends Component {
 
             $this->refreshSubjectTables();
             $this->toast()->success('Assigned', 'Subject assigned to your scope successfully.')->send();
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::error('Subject Assignment Failed: '.$e->getMessage());
             $this->toast()->error('Error', 'Failed to assign the subject to your scope.')->send();
         }
@@ -492,7 +494,7 @@ new class extends Component {
 
             $this->refreshSubjectTables();
             $this->toast()->success('Updated', 'Subject unassigned from your scope.')->send();
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::error('Subject Unassignment Failed: '.$e->getMessage());
             $this->toast()->error('Error', 'Failed to unassign the subject from your scope.')->send();
         }
@@ -592,7 +594,7 @@ new class extends Component {
                     'source_college_id' => $this->managedCollegeId(),
                     'target_campus_id' => $targetScope['campus_id'],
                     'target_college_id' => $targetScope['college_id'],
-                    'requested_by' => auth()->id(),
+                    'requested_by' => Auth::id(),
                 ]);
 
                 $this->recordSubjectAction($subject, 'request_created', ucfirst($this->requestType).' request created.');
@@ -605,7 +607,7 @@ new class extends Component {
             $this->reopenRequestModal();
 
             throw $e;
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             $this->reopenRequestModal();
             Log::error('Subject Request Save Failed: '.$e->getMessage());
             $this->toast()->error('Error', 'Failed to save the subject request.')->send();
@@ -656,7 +658,7 @@ new class extends Component {
 
                 $request->update([
                     'status' => SubjectAssignmentRequest::STATUS_ACCEPTED,
-                    'reviewed_by' => auth()->id(),
+                    'reviewed_by' => Auth::id(),
                     'reviewed_at' => now(),
                 ]);
 
@@ -665,7 +667,7 @@ new class extends Component {
 
             $this->refreshSubjectTables();
             $this->toast()->success('Accepted', 'Subject request accepted successfully.')->send();
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::error('Subject Request Accept Failed: '.$e->getMessage());
             $this->toast()->error('Error', 'Failed to accept the subject request.')->send();
         }
@@ -693,14 +695,14 @@ new class extends Component {
             $request = $this->findIncomingSubjectRequest($id);
             $request->update([
                 'status' => SubjectAssignmentRequest::STATUS_REJECTED,
-                'reviewed_by' => auth()->id(),
+                'reviewed_by' => Auth::id(),
                 'reviewed_at' => now(),
             ]);
 
             $this->recordSubjectAction($request->subject, 'request_rejected', ucfirst($request->request_type).' request rejected.');
             $this->refreshSubjectTables();
             $this->toast()->success('Rejected', 'Subject request rejected successfully.')->send();
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::error('Subject Request Reject Failed: '.$e->getMessage());
             $this->toast()->error('Error', 'Failed to reject the subject request.')->send();
         }
@@ -734,7 +736,7 @@ new class extends Component {
             $this->recordSubjectAction($request->subject, 'request_cancelled', ucfirst($request->request_type).' request cancelled.');
             $this->refreshSubjectTables();
             $this->toast()->success('Cancelled', 'Subject request cancelled successfully.')->send();
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::error('Subject Request Cancel Failed: '.$e->getMessage());
             $this->toast()->error('Error', 'Failed to cancel the subject request.')->send();
         }
@@ -747,9 +749,7 @@ new class extends Component {
 
     protected function resolveManagedScope(): void
     {
-        $user = auth()
-            ->guard()
-            ->user()
+        $user = Auth::user()
             ?->loadMissing(['employeeProfile.campus', 'employeeProfile.college', 'facultyProfile.campus', 'facultyProfile.college']);
         $profile = $user?->employeeProfile ?? $user?->facultyProfile;
 
@@ -899,7 +899,7 @@ new class extends Component {
         $query = Subject::query()
             ->whereKey($id)
             ->where('status', Subject::STATUS_DRAFT)
-            ->where('created_by', auth()->id());
+            ->where('created_by', Auth::id());
 
         if ($includeTrashed) {
             $query->withTrashed();
@@ -946,7 +946,7 @@ new class extends Component {
             ->with('subject')
             ->whereKey($id)
             ->where('status', SubjectAssignmentRequest::STATUS_PENDING)
-            ->where('requested_by', auth()->id())
+            ->where('requested_by', Auth::id())
             ->where('source_campus_id', $this->campus->id)
             ->when(
                 filled($this->managedCollegeId()),
@@ -1001,7 +1001,7 @@ new class extends Component {
     {
         SubjectUserAction::create([
             'subject_id' => $subject->id,
-            'user_id' => auth()->id(),
+            'user_id' => Auth::id(),
             'action' => $action,
             'description' => $description,
         ]);
@@ -1089,7 +1089,7 @@ new class extends Component {
             <livewire:tables.college-admin.assigned-subjects-table
                 :campus-id="$campus->id"
                 :college-id="$this->managedCollegeId()"
-                :user-id="auth()->id()"
+                :user-id="Auth::id()"
             />
         </div>
     </x-card>
@@ -1128,7 +1128,7 @@ new class extends Component {
                     direction="incoming"
                     :campus-id="$campus->id"
                     :college-id="$this->managedCollegeId()"
-                    :user-id="auth()->id()"
+                    :user-id="Auth::id()"
                 />
             </div>
         </x-card>
@@ -1148,7 +1148,7 @@ new class extends Component {
                     direction="outgoing"
                     :campus-id="$campus->id"
                     :college-id="$this->managedCollegeId()"
-                    :user-id="auth()->id()"
+                    :user-id="Auth::id()"
                 />
             </div>
         </x-card>

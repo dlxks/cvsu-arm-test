@@ -5,6 +5,7 @@ namespace App\Livewire\Tables\Admin;
 use App\Models\FacultyProfile;
 use App\Traits\CanManage;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use PowerComponents\LivewirePowerGrid\Button;
 use PowerComponents\LivewirePowerGrid\Column;
@@ -216,7 +217,7 @@ final class FacultyProfilesTable extends PowerGridComponent
             return $query->where('department_id', $this->departmentId);
         }
 
-        $user = auth()->guard()->user()?->loadMissing(['employeeProfile', 'facultyProfile']);
+        $user = Auth::user()?->loadMissing(['employeeProfile', 'facultyProfile']);
         $profile = $user?->employeeProfile ?? $user?->facultyProfile;
 
         if ($user?->hasRole('collegeAdmin') && filled($profile?->college_id)) {

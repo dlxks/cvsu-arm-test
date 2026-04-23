@@ -6,6 +6,7 @@ use App\Enums\RoomStatusEnum;
 use App\Models\Room;
 use App\Traits\CanManage;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Blade;
 use Livewire\Attributes\On;
 use PowerComponents\LivewirePowerGrid\Button;
@@ -278,7 +279,7 @@ final class RoomsTable extends PowerGridComponent
             return $query->where('department_id', $this->departmentId);
         }
 
-        $user = auth()->guard()->user()?->loadMissing(['employeeProfile', 'facultyProfile']);
+        $user = Auth::user()?->loadMissing(['employeeProfile', 'facultyProfile']);
         $profile = $user?->employeeProfile ?? $user?->facultyProfile;
 
         if ($user?->hasRole('collegeAdmin') && filled($profile?->college_id)) {
