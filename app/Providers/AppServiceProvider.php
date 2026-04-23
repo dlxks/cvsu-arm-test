@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Services\ReferenceDataService;
 use App\Support\TallStackUiSetup;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
@@ -16,7 +17,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(ReferenceDataService::class);
     }
 
     /**

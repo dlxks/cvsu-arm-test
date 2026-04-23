@@ -1,12 +1,10 @@
 <?php
 
 use App\Livewire\Forms\Admin\UserForm;
-use App\Models\Campus;
 use App\Models\EmployeeProfile;
 use App\Models\FacultyProfile;
-use App\Models\Permission;
-use App\Models\Role;
 use App\Models\User;
+use App\Services\ReferenceDataService;
 use App\Traits\CanManage;
 use App\Traits\HasCascadingLocationSelects;
 use Illuminate\Support\Facades\Auth;
@@ -30,43 +28,23 @@ new class extends Component {
 
     public array $departments = [];
 
+    public array $campuses = [];
+
+    public array $roles = [];
+
+    public array $permissions = [];
+
     public function mount(User $user): void
     {
         $this->ensureCanManage('users.view');
+
+        // Load reference data once using the service
+        $referenceDataService = app(ReferenceDataService::class);
+        $this->campuses = $referenceDataService->campuses();
+        $this->roles = $referenceDataService->roles();
+        $this->permissions = $referenceDataService->permissions();
+
         $this->loadUser($user);
-    }
-
-    #[Computed]
-    public function campuses(): array
-    {
-        return Campus::query()
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->get(['id', 'name'])
-            ->map(fn(Campus $campus) => ['label' => $campus->name, 'value' => $campus->id])
-            ->toArray();
-    }
-
-    #[Computed]
-    public function roleSelectOptions(): array
-    {
-        return Role::query()
-            ->whereNull('deleted_at')
-            ->orderBy('name')
-            ->get(['name'])
-            ->map(fn(Role $role) => ['label' => $role->display_name, 'value' => $role->name])
-            ->toArray();
-    }
-
-    #[Computed]
-    public function permissionSelectOptions(): array
-    {
-        return Permission::query()
-            ->whereNull('deleted_at')
-            ->orderBy('name')
-            ->get(['name'])
-            ->map(fn(Permission $permission) => ['label' => $permission->display_name, 'value' => $permission->name])
-            ->toArray();
     }
 
     #[Computed]
@@ -418,12 +396,16 @@ new class extends Component {
                         <div class="space-y-3 text-sm text-zinc-700 dark:text-zinc-100">
                             <div>
                                 <p class="text-xs font-medium uppercase tracking-wide text-zinc-400">Created</p>
-                                <p class="mt-1">{{ $user->created_at?->timezone(config('app.timezone'))->format('M d, Y h:i A') }}</p>
+                                <p class="mt-1">
+                                    {{ $user->created_at?->timezone(config('app.timezone'))->format('M d, Y h:i A') }}
+                                </p>
                             </div>
 
                             <div>
                                 <p class="text-xs font-medium uppercase tracking-wide text-zinc-400">Last Updated</p>
-                                <p class="mt-1">{{ $user->updated_at?->timezone(config('app.timezone'))->format('M d, Y h:i A') }}</p>
+                                <p class="mt-1">
+                                    {{ $user->updated_at?->timezone(config('app.timezone'))->format('M d, Y h:i A') }}
+                                </p>
                             </div>
                         </div>
                     </div>

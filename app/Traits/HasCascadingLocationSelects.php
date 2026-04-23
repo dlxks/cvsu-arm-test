@@ -2,8 +2,7 @@
 
 namespace App\Traits;
 
-use App\Models\College;
-use App\Models\Department;
+use App\Services\ReferenceDataService;
 
 /**
  * Provides cascading Campus → College → Department select watchers.
@@ -21,24 +20,22 @@ trait HasCascadingLocationSelects
     {
         $campusId = $this->normalizeAcademicSelectId($campusId);
 
-        return filled($campusId)
-            ? College::query()->where('campus_id', $campusId)->where('is_active', true)->orderBy('name')
-                ->get(['id', 'name'])
-                ->map(fn ($c) => ['label' => $c->name, 'value' => $c->id])
-                ->toArray()
-            : [];
+        if (! filled($campusId)) {
+            return [];
+        }
+
+        return app(ReferenceDataService::class)->collegesForCampus($campusId);
     }
 
     protected function loadDepartmentsForCollege(mixed $collegeId): array
     {
         $collegeId = $this->normalizeAcademicSelectId($collegeId);
 
-        return filled($collegeId)
-            ? Department::query()->where('college_id', $collegeId)->where('is_active', true)->orderBy('name')
-                ->get(['id', 'name'])
-                ->map(fn ($d) => ['label' => $d->name, 'value' => $d->id])
-                ->toArray()
-            : [];
+        if (! filled($collegeId)) {
+            return [];
+        }
+
+        return app(ReferenceDataService::class)->departmentsForCollege($collegeId);
     }
 
     public function updatedFormCampusId($value): void
@@ -103,3 +100,4 @@ trait HasCascadingLocationSelects
         return null;
     }
 }
+

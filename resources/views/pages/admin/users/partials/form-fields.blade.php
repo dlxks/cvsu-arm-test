@@ -14,10 +14,10 @@
     </div>
 
     <div class="grid gap-4 md:grid-cols-2">
-        <x-select.styled label="Roles" wire:model="form.roles" :options="$this->roleSelectOptions" select="label:label|value:value"
+        <x-select.styled label="Roles" wire:model="form.roles" :options="$roles" select="label:label|value:value"
             multiple searchable required />
 
-        <x-select.styled label="Direct Permissions" wire:model="form.direct_permissions" :options="$this->permissionSelectOptions"
+        <x-select.styled label="Direct Permissions" wire:model="form.direct_permissions" :options="$permissions"
             select="label:label|value:value" multiple searchable />
     </div>
 

@@ -1,8 +1,7 @@
 <?php
 
-use App\Models\Permission;
-use App\Models\Role;
 use App\Models\User;
+use App\Services\ReferenceDataService;
 use App\Traits\CanManage;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Computed;
@@ -19,9 +18,18 @@ new class extends Component {
 
     public array $userPermissions = [];
 
+    public array $rolesOptions = [];
+
+    public array $permissionsOptions = [];
+
     public function mount(): void
     {
         $this->ensureCanManage('assignments.manage');
+
+        // Load reference data using the service
+        $referenceDataService = app(ReferenceDataService::class);
+        $this->rolesOptions = $referenceDataService->rolesAsNames();
+        $this->permissionsOptions = $referenceDataService->permissionsAsNames();
     }
 
     public function rules(): array
@@ -97,36 +105,6 @@ new class extends Component {
             )
             ->toArray();
     }
-
-    #[Computed]
-    public function roleSelectOptions(): array
-    {
-        return Role::query()
-            ->orderBy('name')
-            ->get()
-            ->map(
-                fn(Role $role) => [
-                    'label' => $role->name,
-                    'value' => $role->name,
-                ],
-            )
-            ->toArray();
-    }
-
-    #[Computed]
-    public function permissionSelectOptions(): array
-    {
-        return Permission::query()
-            ->orderBy('name')
-            ->get()
-            ->map(
-                fn(Permission $permission) => [
-                    'label' => $permission->name,
-                    'value' => $permission->name,
-                ],
-            )
-            ->toArray();
-    }
 };
 ?>
 
@@ -148,7 +126,7 @@ new class extends Component {
             <div class="space-y-6 rounded-md bg-zinc-50 p-5 dark:bg-zinc-900/40">
                 <div>
                     <x-select.styled wire:key="roles-select-{{ $selectedUserId }}" wire:model="userRoles" label="Roles"
-                        placeholder="Select roles" multiple searchable :options="$this->roleSelectOptions"
+                        placeholder="Select roles" multiple searchable :options="$rolesOptions"
                         select="label:label|value:value" />
 
                     <div class="mt-3">
@@ -169,7 +147,7 @@ new class extends Component {
                 <div>
                     <x-select.styled wire:key="permissions-select-{{ $selectedUserId }}" wire:model="userPermissions"
                         label="Direct Permissions" placeholder="Select direct permissions" multiple searchable
-                        :options="$this->permissionSelectOptions" select="label:label|value:value" />
+                        :options="$permissionsOptions" select="label:label|value:value" />
 
                     <div class="mt-3">
                         <span class="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">Currently Assigned
