@@ -269,9 +269,7 @@ new class extends Component {
             return 'department';
         }
 
-        $user = auth()
-            ->guard()
-            ->user()
+        $user = Auth::user()
             ?->loadMissing(['employeeProfile', 'facultyProfile']);
 
         if ($user?->canAccessCollegeFacultyProfiles() && !$user?->canAccessDepartmentFacultyProfiles()) {
@@ -299,9 +297,7 @@ new class extends Component {
 
     protected function currentCollege(): College
     {
-        $user = auth()
-            ->guard()
-            ->user()
+        $user = Auth::user()
             ?->loadMissing(['employeeProfile.college', 'employeeProfile.campus', 'facultyProfile.college', 'facultyProfile.campus']);
 
         abort_unless($user?->canAccessCollegeFacultyProfiles(), 403);
@@ -315,9 +311,7 @@ new class extends Component {
 
     protected function currentDepartment(): Department
     {
-        $user = auth()
-            ->guard()
-            ->user()
+        $user = Auth::user()
             ?->loadMissing(['employeeProfile.department', 'employeeProfile.college', 'employeeProfile.campus', 'facultyProfile.department', 'facultyProfile.college', 'facultyProfile.campus']);
 
         abort_unless($user?->canAccessDepartmentFacultyProfiles(), 403);
