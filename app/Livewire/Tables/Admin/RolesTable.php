@@ -61,7 +61,7 @@ final class RolesTable extends PowerGridComponent
             ->add('name')
             ->add('guard_name')
             // ->add('permissions_list', fn (Role $role) => $role->permissions->pluck('name')->implode(', '))
-            ->add('deleted_at', fn (Role $role) => $role->deleted_at?->format('d/m/Y'));
+            ->add('deleted_at', fn (Role $role) => $role->deleted_at?->timezone(config('app.timezone'))->format('d/m/Y'));
     }
 
     public function columns(): array

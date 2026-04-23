@@ -18,9 +18,7 @@
     @livewireStyles
 </head>
 
-@php($authUser = \Illuminate\Support\Facades\Auth::user())
-
-<body class="font-sans antialiased" x-cloak x-data="{ name: @js($authUser?->name ?? '') }" x-on:name-updated.window="name = $event.detail.name"
+<body class="font-sans antialiased" x-cloak x-data="{ name: @js(Auth::user()?->name ?? '') }" x-on:name-updated.window="name = $event.detail.name"
     x-bind:class="{ 'dark bg-gray-800': darkTheme, 'bg-gray-50': !darkTheme }">
 
     {{-- MAIN LAYOUT --}}
@@ -48,7 +46,7 @@
                                     x-text="name"></span>
 
                                 {{-- The Avatar serves as the visual trigger --}}
-                                <x-avatar sm background="3aa13a " color="fff" :model="$authUser"
+                                <x-avatar sm background="3aa13a " color="fff" :model="Auth::user()"
                                     class="cursor-pointer border-2 border-emerald-600" />
                             </button>
                         </x-slot:action>
@@ -96,7 +94,7 @@
                 {{-- COLLEGE ADMIN LINKS --}}
                 @canany(['departments.view', 'programs.view', 'faculty_profiles.view', 'subjects.view'])
                     <x-side-bar.item text="College" opened>
-                        @if ($authUser?->canAccessCollegeFacultyProfiles())
+                        @if (Auth::user()?->canAccessCollegeFacultyProfiles())
                             <x-side-bar.item text="Faculty" icon="identification" :current="request()->routeIs(
                                 'college-faculty-profiles.index',
                                 'college-faculty-profiles.*',
@@ -107,7 +105,7 @@
                             <x-side-bar.item text="Departments" icon="briefcase" :current="request()->routeIs('departments.index', 'departments.*')" :route="route('departments.index')" />
                         @endcan
 
-                        @if ($authUser?->canAccessCollegeRooms())
+                        @if (Auth::user()?->canAccessCollegeRooms())
                             <x-side-bar.item text="Rooms" icon="building-office" :current="request()->routeIs('college-rooms.index', 'college-rooms.*')" :route="route('college-rooms.index')" />
                         @endif
 
@@ -129,11 +127,11 @@
                             <x-side-bar.item text="Schedules" icon="calendar-days" />
                         @endcan
 
-                        @if ($authUser?->canAccessDepartmentFacultyProfiles())
+                        @if (Auth::user()?->canAccessDepartmentFacultyProfiles())
                             <x-side-bar.item text="Faculty" icon="identification" :current="request()->routeIs('faculty-profiles.index', 'faculty-profiles.*')" :route="route('faculty-profiles.index')" />
                         @endif
 
-                        @if ($authUser?->canAccessDepartmentRooms())
+                        @if (Auth::user()?->canAccessDepartmentRooms())
                             <x-side-bar.item text="Rooms" icon="building-office" :current="request()->routeIs('rooms.index', 'rooms.*')" :route="route('rooms.index')" />
                         @endif
 

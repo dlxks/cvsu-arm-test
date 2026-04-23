@@ -29,24 +29,30 @@ describe('PermissionsTable', function () {
         expect(config('livewire-powergrid.filter'))->toBe('outside')
             ->and($setUp[0]->fileName)->toBe('permissions-list')
             ->and($setUp[0]->type)->toBe([Exportable::TYPE_XLS, Exportable::TYPE_CSV])
-            ->and($fields['deleted_at']($permission->fresh()))->toBe($permission->fresh()->deleted_at->format('d/m/Y H:i:s'));
+            ->and($fields['deleted_at']($permission->fresh()))
+            ->toBe($permission->fresh()->deleted_at->timezone(config('app.timezone'))->format('d/m/Y H:i:s'));
     });
 
-    it('builds edit, delete, and restore actions', function () {
-        $permission = Permission::findOrCreate('permissions.audit', 'web');
+    it('builds the expected actions for active and trashed permissions', function () {
+        $activePermission = Permission::findOrCreate('permissions.audit', 'web');
+        $trashedPermission = Permission::findOrCreate('permissions.audit.restore', 'web');
+        $trashedPermission->delete();
 
-        $actions = Livewire::actingAs($this->user)
+        $component = Livewire::actingAs($this->user)
             ->test(PermissionsTable::class)
-            ->instance()
-            ->actions($permission);
+            ->instance();
 
-        expect(collect($actions)->pluck('action')->all())->toBe([
+        $activeActions = $component->actions($activePermission);
+        $trashedActions = $component->actions($trashedPermission->fresh());
+
+        expect(collect($activeActions)->pluck('action')->all())->toBe([
             'edit-permission',
             'delete-permission',
-            'restore-permission',
-        ])->and($actions[0]->attributes['wire:click'])->toContain('editPermission')
-            ->and($actions[1]->attributes['wire:click'])->toContain('confirmDeletePermission')
-            ->and($actions[2]->attributes['wire:click'])->toContain('confirmRestorePermission');
+        ])->and($activeActions[0]->attributes['wire:click'])->toContain('editPermission')
+            ->and($activeActions[1]->attributes['wire:click'])->toContain('confirmDeletePermission')
+            ->and(collect($trashedActions)->pluck('action')->all())->toBe([
+                'restore-permission',
+            ])->and($trashedActions[0]->attributes['wire:click'])->toContain('confirmRestorePermission');
     });
 
     it('soft deletes and restores permissions through table actions', function () {
@@ -85,10 +91,9 @@ describe('RolesTable', function () {
         $fields = $component->fields()->fields;
         $actions = $component->actions($role->fresh());
 
-        expect($fields['deleted_at']($role->fresh()))->toBe($role->fresh()->deleted_at->format('d/m/Y'))
+        expect($fields['deleted_at']($role->fresh()))
+            ->toBe($role->fresh()->deleted_at->timezone(config('app.timezone'))->format('d/m/Y'))
             ->and(collect($actions)->pluck('action')->all())->toBe([
-                'edit-role',
-                'delete-role',
                 'restore-role',
             ]);
     });

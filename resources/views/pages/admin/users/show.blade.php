@@ -418,12 +418,12 @@ new class extends Component {
                         <div class="space-y-3 text-sm text-zinc-700 dark:text-zinc-100">
                             <div>
                                 <p class="text-xs font-medium uppercase tracking-wide text-zinc-400">Created</p>
-                                <p class="mt-1">{{ $user->created_at?->format('M d, Y h:i A') }}</p>
+                                <p class="mt-1">{{ $user->created_at?->timezone(config('app.timezone'))->format('M d, Y h:i A') }}</p>
                             </div>
 
                             <div>
                                 <p class="text-xs font-medium uppercase tracking-wide text-zinc-400">Last Updated</p>
-                                <p class="mt-1">{{ $user->updated_at?->format('M d, Y h:i A') }}</p>
+                                <p class="mt-1">{{ $user->updated_at?->timezone(config('app.timezone'))->format('M d, Y h:i A') }}</p>
                             </div>
                         </div>
                     </div>

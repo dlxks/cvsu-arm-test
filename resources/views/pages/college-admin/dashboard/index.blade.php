@@ -127,8 +127,7 @@ new class extends Component {
 
             <div>
                 @can('programs.view')
-                    <x-button tag="a" href="{{ route('programs.index') }}" sm color="primary"
-                        text="View Programs" />
+                    <x-button tag="a" href="{{ route('programs.index') }}" sm color="primary" text="View Programs" />
                 @else
                     <span class="text-sm text-zinc-400 dark:text-zinc-500">Program details are unavailable for this
                         account.</span>

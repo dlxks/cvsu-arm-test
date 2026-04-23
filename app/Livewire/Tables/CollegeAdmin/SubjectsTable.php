@@ -4,7 +4,6 @@ namespace App\Livewire\Tables\CollegeAdmin;
 
 use App\Models\Subject;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Carbon;
 use Livewire\Attributes\On;
 use PowerComponents\LivewirePowerGrid\Button;
 use PowerComponents\LivewirePowerGrid\Column;
@@ -56,7 +55,10 @@ final class SubjectsTable extends PowerGridComponent
             ->add('laboratory_units')
             ->add('is_credit')
             ->add('is_active')
-            ->add('created_at_formatted', fn (Subject $model) => Carbon::parse($model->created_at)->format('d/m/Y H:i:s'));
+            ->add(
+                'created_at_formatted',
+                fn (Subject $model) => $model->created_at?->timezone(config('app.timezone'))->format('d/m/Y H:i:s')
+            );
     }
 
     public function columns(): array

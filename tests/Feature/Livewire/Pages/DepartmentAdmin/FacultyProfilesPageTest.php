@@ -6,6 +6,7 @@ use App\Models\Department;
 use App\Models\EmployeeProfile;
 use App\Models\FacultyProfile;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 
 describe('department admin faculty profiles page', function () {
@@ -71,5 +72,19 @@ describe('department admin faculty profiles page', function () {
         $this->actingAs($facultyOnlyAdmin)
             ->get(route('faculty-profiles.index'))
             ->assertForbidden();
+    });
+
+    it('renders faculty profile timestamps in Philippine time on the detail page', function () {
+        $profile = FacultyProfile::factory()->forDepartment($this->department)->create();
+
+        DB::table('faculty_profiles')->where('id', $profile->id)->update([
+            'created_at' => '2026-04-23 10:51:41',
+            'updated_at' => '2026-04-23 11:31:21',
+        ]);
+
+        Livewire::actingAs($this->user)
+            ->test('pages::dept-admin.faculty-profiles.show', ['facultyProfile' => $profile->fresh()])
+            ->assertSee('Apr 23, 2026 10:51 AM')
+            ->assertSee('Apr 23, 2026 11:31 AM');
     });
 });

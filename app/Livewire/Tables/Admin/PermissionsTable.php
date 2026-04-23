@@ -5,7 +5,6 @@ namespace App\Livewire\Tables\Admin;
 use App\Models\Permission;
 use App\Traits\CanManage;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
 use PowerComponents\LivewirePowerGrid\Button;
 use PowerComponents\LivewirePowerGrid\Column;
@@ -60,7 +59,10 @@ final class PermissionsTable extends PowerGridComponent
             ->add('id')
             ->add('name')
             ->add('guard_name')
-            ->add('deleted_at', fn ($model) => $model->deleted_at ? Carbon::parse($model->deleted_at)->format('d/m/Y H:i:s') : null);
+            ->add(
+                'deleted_at',
+                fn ($model) => $model->deleted_at?->timezone(config('app.timezone'))->format('d/m/Y H:i:s')
+            );
     }
 
     public function columns(): array
