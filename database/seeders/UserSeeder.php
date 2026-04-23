@@ -32,6 +32,8 @@ class UserSeeder extends Seeder
         $ceitPrimaryDepartment = $this->findDepartmentForCollege('CEIT');
         $ceitSecondaryDepartment = $this->findDepartmentForCollege('CEIT', 1);
         $casPrimaryDepartment = $this->findDepartmentForCollege('CAS');
+        $cspearPrimaryDepartment = $this->findDepartmentForCollege('CSPEAR');
+        $cspearSecondaryDepartment = $this->findDepartmentForCollege('CSPEAR', 1);
 
         $namedSuperAdmin = $this->upsertUser(
             'tristan.sangangbayan@cvsu.edu.ph',
@@ -57,6 +59,22 @@ class UserSeeder extends Seeder
 
         $this->deleteFacultyProfile($legacyCollegeAdmin->id);
 
+        $additionalCollegeAdmin = $this->upsertUser(
+            'ljohnmark9@gmail.com',
+            'L John Mark',
+            ['collegeAdmin']
+        );
+
+        $this->upsertEmployeeProfile($additionalCollegeAdmin, $cspearPrimaryDepartment, [
+            'employee_no' => 'CADM-0002',
+            'first_name' => 'L John',
+            'middle_name' => null,
+            'last_name' => 'Mark',
+            'position' => 'College Administrator',
+        ]);
+
+        $this->deleteFacultyProfile($additionalCollegeAdmin->id);
+
         $legacyDepartmentAdmin = $this->upsertUser(
             'sky.shira7@gmail.com',
             'Department Admin',
@@ -72,6 +90,23 @@ class UserSeeder extends Seeder
         ]);
 
         $this->deleteFacultyProfile($legacyDepartmentAdmin->id);
+
+        // Department Admin 2
+        $legacyDepartmentAdmin2 = $this->upsertUser(
+            'banogfires@gmail.com',
+            'Department Admin',
+            ['deptAdmin']
+        );
+
+        $this->upsertEmployeeProfile($legacyDepartmentAdmin2, $cspearSecondaryDepartment, [
+            'employee_no' => 'DADM-0002',
+            'first_name' => 'Department2',
+            'middle_name' => null,
+            'last_name' => 'Admin2',
+            'position' => 'Department Administrator',
+        ]);
+
+        $this->deleteFacultyProfile($legacyDepartmentAdmin2->id);
 
         $legacyFaculty = $this->upsertUser(
             'sangangbayant@gmail.com',
