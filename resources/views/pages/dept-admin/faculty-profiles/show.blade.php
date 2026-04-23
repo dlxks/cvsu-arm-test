@@ -180,7 +180,7 @@ new class extends Component
             return 'department';
         }
 
-        $user = auth()->guard()->user()?->loadMissing(['employeeProfile', 'facultyProfile']);
+        $user = Auth::user()?->loadMissing(['employeeProfile', 'facultyProfile']);
 
         if ($user?->canAccessCollegeFacultyProfiles() && ! $user?->canAccessDepartmentFacultyProfiles()) {
             return 'college';
