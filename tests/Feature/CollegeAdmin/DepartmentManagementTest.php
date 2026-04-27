@@ -1,5 +1,6 @@
 <?php
 
+use App\Livewire\Tables\Admin\DepartmentsTable;
 use App\Models\Campus;
 use App\Models\College;
 use App\Models\Department;
@@ -174,7 +175,7 @@ describe('college admin department management', function () {
         $user = User::factory()->collegeAdmin()->create();
 
         Livewire::actingAs($user)
-            ->test('pages::college-admin.departments.index')
+            ->test(DepartmentsTable::class, ['collegeId' => $college->id])
             ->call('deleteDepartment', $department->id)
             ->assertHasNoErrors();
 
@@ -194,7 +195,7 @@ describe('college admin department management', function () {
         $user = User::factory()->collegeAdmin()->create();
 
         Livewire::actingAs($user)
-            ->test('pages::college-admin.departments.index')
+            ->test(DepartmentsTable::class, ['collegeId' => $college->id])
             ->call('restoreDepartment', $department->id)
             ->assertHasNoErrors();
 

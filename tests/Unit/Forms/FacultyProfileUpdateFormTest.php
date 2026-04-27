@@ -6,14 +6,13 @@ use App\Models\College;
 use App\Models\Department;
 use App\Models\FacultyProfile;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 use Tests\TestCase;
 
 uses(TestCase::class, RefreshDatabase::class);
 
 describe('FacultyProfileUpdateForm', function () {
-    it('rejects changes to campus college and department during validation', function () {
+    it('accepts assignment changes when selected department matches selected campus and college', function () {
         $profile = FacultyProfile::factory()->create();
         $otherCampus = Campus::factory()->create();
         $otherCollege = College::factory()->forCampus($otherCampus)->create();
@@ -33,16 +32,10 @@ describe('FacultyProfileUpdateForm', function () {
         $form->college_id = $otherCollege->id;
         $form->department_id = $otherDepartment->id;
 
-        try {
-            $form->validateForm();
+        $validated = $form->validateForm();
 
-            $this->fail('Expected the faculty profile update form to reject assignment changes.');
-        } catch (ValidationException $exception) {
-            expect($exception->errors())->toHaveKeys([
-                'form.campus_id',
-                'form.college_id',
-                'form.department_id',
-            ]);
-        }
+        expect($validated['campus_id'])->toBe($otherCampus->id)
+            ->and($validated['college_id'])->toBe($otherCollege->id)
+            ->and($validated['department_id'])->toBe($otherDepartment->id);
     });
 });

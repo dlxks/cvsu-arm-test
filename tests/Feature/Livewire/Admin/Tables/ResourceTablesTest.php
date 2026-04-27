@@ -151,18 +151,23 @@ describe('DepartmentsTable', function () {
             ->not->toContain($departmentOutsideCollege->id);
     });
 
-    it('builds edit, delete, and restore actions with the expected events', function () {
-        $department = Department::factory()->forCollege($this->college)->create();
+    it('builds expected actions and events for active and trashed departments', function () {
+        $activeDepartment = Department::factory()->forCollege($this->college)->create();
+        $trashedDepartment = Department::factory()->forCollege($this->college)->create();
+        $trashedDepartment->delete();
 
-        $actions = Livewire::actingAs($this->user)
+        $component = Livewire::actingAs($this->user)
             ->test(DepartmentsTable::class, ['collegeId' => $this->college->id])
-            ->instance()
-            ->actions($department);
+            ->instance();
 
-        expect(collect($actions)->pluck('action')->all())->toBe(['edit', 'delete', 'restore'])
-            ->and($actions[0]->attributes['wire:click'])->toContain('openEditDepartmentModal')
-            ->and($actions[1]->attributes['wire:click'])->toContain('confirmDeleteDepartment')
-            ->and($actions[2]->attributes['wire:click'])->toContain('confirmRestoreDepartment');
+        $activeActions = $component->actions($activeDepartment);
+        $trashedActions = $component->actions($trashedDepartment);
+
+        expect(collect($activeActions)->pluck('action')->all())->toBe(['edit', 'delete'])
+            ->and($activeActions[0]->attributes['wire:click'])->toContain('openEditDepartmentModal')
+            ->and($activeActions[1]->attributes['wire:click'])->toContain('confirmDeleteDepartment')
+            ->and(collect($trashedActions)->pluck('action')->all())->toBe(['restore'])
+            ->and($trashedActions[0]->attributes['wire:click'])->toContain('confirmRestoreDepartment');
     });
 
     it('hides the correct action buttons based on trash state', function () {
@@ -172,21 +177,11 @@ describe('DepartmentsTable', function () {
 
         $component = Livewire::actingAs($this->user)->test(DepartmentsTable::class, ['collegeId' => $this->college->id])->instance();
 
-        $activeRules = collect($component->actionRules($activeDepartment))
-            ->mapWithKeys(fn ($rule) => [$rule->forAction => ($rule->rule['when'])($activeDepartment)]);
+        $activeActionNames = collect($component->actions($activeDepartment))->pluck('action')->all();
+        $trashedActionNames = collect($component->actions($trashedDepartment))->pluck('action')->all();
 
-        $trashedRules = collect($component->actionRules($trashedDepartment))
-            ->mapWithKeys(fn ($rule) => [$rule->forAction => ($rule->rule['when'])($trashedDepartment)]);
-
-        expect($activeRules->all())->toBe([
-            'edit' => false,
-            'delete' => false,
-            'restore' => true,
-        ])->and($trashedRules->all())->toBe([
-            'edit' => true,
-            'delete' => true,
-            'restore' => false,
-        ]);
+        expect($activeActionNames)->toBe(['edit', 'delete'])
+            ->and($trashedActionNames)->toBe(['restore']);
     });
 });
 
