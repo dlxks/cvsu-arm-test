@@ -3,6 +3,7 @@
 namespace App\Livewire\Forms\Admin;
 
 use App\Enums\RoomStatusEnum;
+use App\Enums\RoomTypesEnum;
 use App\Models\Room;
 use Illuminate\Validation\Rule;
 use Livewire\Form;
@@ -24,7 +25,7 @@ class RoomForm extends Form
 
     public ?int $room_no = null;
 
-    public string $type = 'LECTURE';
+    public string $type = RoomTypesEnum::LECTURE->value;
 
     public string $description = '';
 
@@ -50,7 +51,7 @@ class RoomForm extends Form
         $this->name = $room->name;
         $this->floor_no = (string) $room->floor_no;
         $this->room_no = $room->room_no;
-        $this->type = $room->type;
+        $this->type = Room::normalizeTypeValue($room->type) ?? RoomTypesEnum::LECTURE->value;
         $this->description = $room->description ?? '';
         $this->location = $room->location ?? '';
         $this->is_active = $room->is_active;
@@ -63,7 +64,7 @@ class RoomForm extends Form
         $this->campus_id = $campusId;
         $this->college_id = $collegeId;
         $this->department_id = $departmentId;
-        $this->type = 'LECTURE';
+        $this->type = RoomTypesEnum::LECTURE->value;
         $this->status = RoomStatusEnum::USEABLE->value;
         $this->is_active = true;
     }
@@ -108,7 +109,7 @@ class RoomForm extends Form
             'name' => trim($validated['name']),
             'floor_no' => trim($validated['floor_no']),
             'room_no' => (int) $validated['room_no'],
-            'type' => $validated['type'],
+            'type' => Room::toDatabaseTypeValue($validated['type']) ?? RoomTypesEnum::LECTURE->value,
             'description' => filled($validated['description']) ? trim($validated['description']) : null,
             'location' => filled($validated['location']) ? trim($validated['location']) : null,
             'is_active' => (bool) $validated['is_active'],

@@ -4,7 +4,6 @@ namespace App\Enums;
 
 enum RoomTypesEnum: string
 {
-    case LECTURE = 'Lecture';
-    case LABORATORY = 'Laboratory';
-
+    case LECTURE = 'LECTURE';
+    case LABORATORY = 'LABORATORY';
 }

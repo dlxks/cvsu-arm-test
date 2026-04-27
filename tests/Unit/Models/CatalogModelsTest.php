@@ -57,6 +57,16 @@ describe('Room model', function () {
             'status',
         ]);
     });
+
+    it('normalizes room types from labels and exposes a readable type label', function () {
+        $room = Room::factory()->make([
+            'type' => 'LABORATORY',
+        ]);
+
+        expect(Room::normalizeTypeValue('Laboratory'))->toBe('LABORATORY')
+            ->and(Room::normalizeTypeValue('laboratory'))->toBe('LABORATORY')
+            ->and($room->type_label)->toBe('Laboratory');
+    });
 });
 
 describe('Subject model', function () {
@@ -83,7 +93,7 @@ describe('Subject model', function () {
 
 describe('Role model', function () {
     beforeEach(function () {
-        $this->role = new Role();
+        $this->role = new Role;
     });
 
     it('defines the expected fillable attributes', function () {
@@ -93,7 +103,7 @@ describe('Role model', function () {
 
 describe('Permission model', function () {
     beforeEach(function () {
-        $this->permission = new Permission();
+        $this->permission = new Permission;
     });
 
     it('defines the expected fillable attributes', function () {

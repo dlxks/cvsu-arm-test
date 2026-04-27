@@ -3,6 +3,7 @@
 namespace App\Imports;
 
 use App\Enums\RoomStatusEnum;
+use App\Enums\RoomTypesEnum;
 use App\Models\Department;
 use App\Models\Room;
 use Illuminate\Support\Collection;
@@ -24,9 +25,9 @@ class RoomsImport implements ToCollection, WithHeadingRow
                 continue;
             }
 
-            $type = $this->normalizeEnumValue((string) ($row['type'] ?? ''), Room::TYPES);
+            $type = Room::normalizeTypeValue($row['type'] ?? null);
             $status = Room::toDatabaseStatusValue(
-                $this->normalizeEnumValue((string) ($row['status'] ?? ''), Room::STATUSES)
+                Room::normalizeStatusValue($row['status'] ?? null)
                     ?? RoomStatusEnum::USEABLE->value
             );
             $isActive = $this->normalizeBoolean($row['is_active'] ?? true);
@@ -41,7 +42,7 @@ class RoomsImport implements ToCollection, WithHeadingRow
                     'college_id' => $this->department->college_id,
                     'name' => filled($row['name'] ?? null) ? trim((string) $row['name']) : 'Room '.$roomNo,
                     'floor_no' => filled($row['floor_no'] ?? null) ? trim((string) $row['floor_no']) : '1',
-                    'type' => $type ?? 'LECTURE',
+                    'type' => $type ?? RoomTypesEnum::LECTURE->value,
                     'description' => filled($row['description'] ?? null) ? trim((string) $row['description']) : null,
                     'location' => filled($row['location'] ?? null) ? trim((string) $row['location']) : null,
                     'is_active' => $isActive,
@@ -62,32 +63,6 @@ class RoomsImport implements ToCollection, WithHeadingRow
         }
 
         return max(1, (int) $value);
-    }
-
-    protected function normalizeEnumValue(string $value, array $options): ?string
-    {
-        if (! filled($value)) {
-            return null;
-        }
-
-        $candidate = trim($value);
-
-        if (array_key_exists($candidate, $options)) {
-            return $candidate;
-        }
-
-        $normalized = strtolower(str_replace([' ', '-'], '_', $candidate));
-
-        foreach ($options as $key => $label) {
-            $normalizedKey = strtolower(str_replace([' ', '-'], '_', (string) $key));
-            $normalizedLabel = strtolower(str_replace([' ', '-'], '_', (string) $label));
-
-            if ($normalized === $normalizedKey || $normalized === $normalizedLabel) {
-                return (string) $key;
-            }
-        }
-
-        return null;
     }
 
     protected function normalizeBoolean(mixed $value): bool

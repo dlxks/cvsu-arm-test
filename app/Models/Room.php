@@ -41,8 +41,42 @@ class Room extends Model
     protected function typeLabel(): Attribute
     {
         return Attribute::make(
-            get: fn () => self::TYPES[$this->type] ?? ($this->type ?: '-'),
+            get: function (): string {
+                $normalizedType = self::normalizeTypeValue($this->type);
+
+                if ($normalizedType !== null) {
+                    return self::TYPES[$normalizedType] ?? Str::headline(strtolower($normalizedType));
+                }
+
+                $rawType = trim((string) $this->type);
+
+                return $rawType !== '' ? Str::headline(str_replace('_', ' ', strtolower($rawType))) : '-';
+            },
         );
+    }
+
+    public static function normalizeTypeValue(mixed $type): ?string
+    {
+        if (! filled($type)) {
+            return null;
+        }
+
+        if ($type instanceof RoomTypesEnum) {
+            return $type->value;
+        }
+
+        $normalized = strtolower(str_replace([' ', '-'], '_', trim((string) $type)));
+
+        foreach (self::TYPES as $key => $label) {
+            $normalizedKey = strtolower(str_replace([' ', '-'], '_', (string) $key));
+            $normalizedLabel = strtolower(str_replace([' ', '-'], '_', (string) $label));
+
+            if ($normalized === $normalizedKey || $normalized === $normalizedLabel) {
+                return (string) $key;
+            }
+        }
+
+        return null;
     }
 
     protected function statusLabel(): Attribute
@@ -82,6 +116,11 @@ class Room extends Model
         $normalizedStatus = self::normalizeStatusValue($status);
 
         return $normalizedStatus !== null ? strtoupper($normalizedStatus) : null;
+    }
+
+    public static function toDatabaseTypeValue(mixed $type): ?string
+    {
+        return self::normalizeTypeValue($type);
     }
 
     protected function displayName(): Attribute
