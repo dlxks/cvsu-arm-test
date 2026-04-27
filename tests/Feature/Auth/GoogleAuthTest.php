@@ -25,6 +25,12 @@ describe('google authentication', function () {
     beforeEach(function () {
         collect(['superAdmin', 'collegeAdmin', 'deptAdmin', 'faculty'])
             ->each(fn (string $role) => Role::findOrCreate($role, 'web'));
+
+        config([
+            'services.google.client_id' => 'test-google-client-id',
+            'services.google.client_secret' => 'test-google-client-secret',
+            'services.google.redirect' => 'https://cvsu-arm-test.test/auth/google/callback',
+        ]);
     });
 
     it('google callback logs in eligible user and redirects to dashboard', function () {
@@ -82,6 +88,21 @@ describe('google authentication', function () {
             'email' => 'Your account is inactive. Please contact the administrator.',
         ]);
         $this->assertGuest();
+    });
+
+    it('shows a friendly error when google oauth is not configured', function () {
+        config([
+            'services.google.client_id' => null,
+            'services.google.client_secret' => null,
+            'services.google.redirect' => null,
+        ]);
+
+        $response = $this->get(route('google.redirect'));
+
+        $response->assertRedirect(route('login'));
+        $response->assertSessionHasErrors([
+            'email' => 'Google sign-in is not configured yet. Please contact the administrator.',
+        ]);
     });
 
     it('logout clears authenticated session and redirects to login', function () {

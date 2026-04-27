@@ -28,6 +28,7 @@ class DatabaseSeeder extends Seeder
             PrerequisiteSubjectSeeder::class,
             RoleSeeder::class,
             UserSeeder::class,
+            GeneratedUserSeeder::class,
         ]);
     }
 }
