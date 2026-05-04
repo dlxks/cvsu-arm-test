@@ -93,8 +93,11 @@ final class RoomsTable extends PowerGridComponent
             ->add('department_name', fn (Room $model) => $model->department?->name ?? '-')
             ->add('location_text', fn (Room $model) => $model->location ?: '-')
             ->add('description_text', fn (Room $model) => $model->description ?: '-')
+            ->add('availability_text', fn (Room $model) => (bool) $model->is_active ? 'Active' : 'Inactive')
+            ->add('status_text', fn (Room $model) => $model->status_label)
             ->add('availability', fn (Room $model) => $this->statusBadge((bool) $model->is_active))
             ->add('status_badge', fn (Room $model) => $this->roomStatusBadge($model));
+
     }
 
     public function columns(): array
@@ -111,6 +114,7 @@ final class RoomsTable extends PowerGridComponent
             Column::make('Floor', 'floor_label', 'floor_no')
                 ->sortable()
                 ->searchable(),
+
             Column::make('Campus', 'campus_name')
                 ->hidden(isHidden: true, isForceHidden: false)
                 ->searchable(),
@@ -119,16 +123,29 @@ final class RoomsTable extends PowerGridComponent
                 ->searchable(),
             Column::make('Department', 'department_name')
                 ->searchable(),
+
             Column::make('Location', 'location_text')
                 ->searchable(),
+
             Column::make('Description', 'description_text')
                 ->hidden(isHidden: true, isForceHidden: false)
                 ->searchable(),
+
             Column::make('Availability', 'availability', 'is_active')
-                ->sortable(),
+                ->sortable()
+                ->visibleInExport(false),
+            Column::make('Availability Label', 'availability_text')
+                ->hidden()
+                ->visibleInExport(true),
+
             Column::make('Status', 'status_badge', 'status')
                 ->sortable()
-                ->searchable(),
+                ->searchable()
+                ->visibleInExport(false),
+            Column::make('Status Label', 'status_text')
+                ->hidden()
+                ->visibleInExport(true),
+
             Column::action('Action'),
         ];
     }

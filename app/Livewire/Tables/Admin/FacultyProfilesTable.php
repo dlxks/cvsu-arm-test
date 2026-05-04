@@ -2,6 +2,8 @@
 
 namespace App\Livewire\Tables\Admin;
 
+use App\Models\College;
+use App\Models\Department;
 use App\Models\FacultyProfile;
 use App\Traits\CanManage;
 use Illuminate\Database\Eloquent\Builder;
@@ -29,6 +31,11 @@ final class FacultyProfilesTable extends PowerGridComponent
     public ?int $departmentId = null;
 
     public string $tableName = 'facultyProfilesTable';
+
+    public function boot(): void
+    {
+        config(['livewire-powergrid.filter' => 'outside']);
+    }
 
     public function setUp(): array
     {
@@ -79,6 +86,8 @@ final class FacultyProfilesTable extends PowerGridComponent
             ->add('full_name', fn (FacultyProfile $model) => trim($model->first_name.' '.$model->last_name))
             ->add('email')
             ->add('academic_rank', fn (FacultyProfile $model) => $model->academic_rank ?: '-')
+            ->add('college_id')
+            ->add('department_id')
             ->add('campus_name', fn (FacultyProfile $model) => $model->campus?->name ?? '-')
             ->add('college_name', fn (FacultyProfile $model) => $model->college?->name ?? '-')
             ->add('department_name', fn (FacultyProfile $model) => $model->department ? $model->department->name : '-');
@@ -94,8 +103,8 @@ final class FacultyProfilesTable extends PowerGridComponent
             Column::make('Email', 'email')->sortable()->searchable(),
             Column::make('Academic Rank', 'academic_rank')->sortable()->searchable()->hidden(isHidden: true, isForceHidden: false),
             Column::make('Campus', 'campus_name')->searchable(),
-            Column::make('College', 'college_name')->searchable(),
-            Column::make('Department', 'department_name')->searchable(),
+            Column::make('College', 'college_name', 'college_id')->searchable(),
+            Column::make('Department', 'department_name', 'department_id')->searchable(),
             Column::action('Action'),
         ];
     }
@@ -104,9 +113,97 @@ final class FacultyProfilesTable extends PowerGridComponent
     {
         return [
             Filter::inputText('full_name')->operators(['contains']),
-            Filter::inputText('email')->operators(['contains']),
-            Filter::inputText('academic_rank')->operators(['contains']),
+
+            Filter::select('academic_rank', 'academic_rank')
+                ->dataSource($this->academicRankFilterOptions())
+                ->optionLabel('name')
+                ->optionValue('id')
+                ->builder(fn (Builder $query, $value) => filled($value) ? $query->where('academic_rank', $value) : $query),
+
+            Filter::select('college_id', 'college_id')
+                ->dataSource($this->collegeFilterOptions())
+                ->optionLabel('name')
+                ->optionValue('id')
+                ->builder(fn (Builder $query, $value) => filled($value) ? $query->where('college_id', (int) $value) : $query),
+
+            Filter::select('department_id', 'department_id')
+                ->dataSource($this->departmentFilterOptions())
+                ->optionLabel('name')
+                ->optionValue('id')
+                ->builder(fn (Builder $query, $value) => filled($value) ? $query->where('department_id', (int) $value) : $query),
+
         ];
+    }
+
+    protected function academicRankFilterOptions(): array
+    {
+        return $this->filterOptionsQuery()
+            ->whereNotNull('academic_rank')
+            ->where('academic_rank', '!=', '')
+            ->distinct()
+            ->orderBy('academic_rank')
+            ->pluck('academic_rank')
+            ->map(fn (string $rank) => [
+                'id' => $rank,
+                'name' => $rank,
+            ])
+            ->values()
+            ->all();
+    }
+
+    protected function collegeFilterOptions(): array
+    {
+        $collegeIds = $this->filterOptionsQuery()
+            ->whereNotNull('college_id')
+            ->distinct()
+            ->orderBy('college_id')
+            ->pluck('college_id')
+            ->all();
+
+        if (blank($collegeIds)) {
+            return [];
+        }
+
+        return College::query()
+            ->whereIn('id', $collegeIds)
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(fn (College $college) => [
+                'id' => $college->id,
+                'name' => $college->name,
+            ])
+            ->all();
+    }
+
+    protected function departmentFilterOptions(): array
+    {
+        $departmentIds = $this->filterOptionsQuery()
+            ->whereNotNull('department_id')
+            ->distinct()
+            ->orderBy('department_id')
+            ->pluck('department_id')
+            ->all();
+
+        if (blank($departmentIds)) {
+            return [];
+        }
+
+        return Department::query()
+            ->whereIn('id', $departmentIds)
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(fn (Department $department) => [
+                'id' => $department->id,
+                'name' => $department->name,
+            ])
+            ->all();
+    }
+
+    protected function filterOptionsQuery(): Builder
+    {
+        return $this->applyManagedScope(FacultyProfile::query())
+            ->when($this->softDeletes === 'withTrashed', fn (Builder $query) => $query->withTrashed())
+            ->when($this->softDeletes === 'onlyTrashed', fn (Builder $query) => $query->onlyTrashed());
     }
 
     public function actions($row): array

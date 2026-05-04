@@ -137,7 +137,7 @@ final class DepartmentsTable extends PowerGridComponent
         return $actions;
     }
 
-        public function confirmDeleteDepartment(array $params): void
+    public function confirmDeleteDepartment(array $params): void
     {
         $this->ensureCanManage('departments.delete');
 

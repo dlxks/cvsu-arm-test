@@ -76,7 +76,10 @@ final class ProgramsTable extends PowerGridComponent
     {
         return [
             Column::make('Id', 'id')
+                ->sortable()
+                ->visibleInExport(true)
                 ->hidden(isHidden: true, isForceHidden: false),
+
             Column::make('Code', 'code')
                 ->sortable()
                 ->searchable(),

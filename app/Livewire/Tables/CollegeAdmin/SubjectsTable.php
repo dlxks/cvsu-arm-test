@@ -76,6 +76,8 @@ final class SubjectsTable extends PowerGridComponent
             ->add('is_credit')
             ->add('is_active')
             ->add('units_label', fn (Subject $model) => $model->units_label)
+            ->add('lecture_units', fn (Subject $model) => $model->lecture_units)
+            ->add('laboratory_units', fn (Subject $model) => $model->laboratory_units)
             ->add('credit_label', fn (Subject $model) => $model->credit_label)
             ->add('availability', fn (Subject $model) => $model->is_active ? 'Active' : 'Inactive')
             ->add(
@@ -88,6 +90,7 @@ final class SubjectsTable extends PowerGridComponent
     {
         return [
             Column::make('Id', 'id')
+                ->sortable()
                 ->hidden(isHidden: true, isForceHidden: false),
 
             Column::make('Code', 'code')
@@ -103,11 +106,20 @@ final class SubjectsTable extends PowerGridComponent
                 ->searchable()
                 ->hidden(isHidden: true, isForceHidden: false),
 
-            Column::make('Units', 'units_label'),
+            // Units display and data
+            Column::make('Units', 'units_label')
+                ->visibleInExport(false),
+            Column::make('Lecture Units', 'lecture_units')
+                ->hidden()
+                ->visibleInExport(true),
+            Column::make('Laboratory Units', 'laboratory_units')
+                ->hidden()
+                ->visibleInExport(true),
 
             Column::make('Credit Type', 'credit_label', 'is_credit')
                 ->sortable()
-                ->searchable(),
+                ->searchable()
+                ->visibleInExport(false),
 
             Column::make('Availability', 'availability', 'is_active')
                 ->sortable()
@@ -142,7 +154,6 @@ final class SubjectsTable extends PowerGridComponent
                 ->optionValue('id')
                 ->builder(fn (Builder $query, $value) => filled($value) ? $query->where('is_active', (int) $value) : $query),
 
-            Filter::datetimepicker('created_at'),
         ];
     }
 
