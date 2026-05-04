@@ -145,33 +145,35 @@
                         @endif
                     </x-side-bar.item>
                 @endif
-                
+
                 {{-- RESOURCES MANAGEMENT LINKS --}}
-                <x-side-bar.item text="Resources" opened>
-                    @can('departments.view')
-                        <x-side-bar.item text="Departments" icon="briefcase" :current="request()->routeIs('departments.index', 'departments.*')" :route="route('departments.index')" />
-                    @endcan
+                @if (Auth::user()?->hasCollegeAssignment() || Auth::user()?->hasDepartmentAssignment())
+                    <x-side-bar.item text="Resources" opened>
+                        @can('departments.view')
+                            <x-side-bar.item text="Departments" icon="briefcase" :current="request()->routeIs('departments.index', 'departments.*')" :route="route('departments.index')" />
+                        @endcan
 
 
-                    @if (Auth::user()?->canAccessCollegeRooms())
-                        <x-side-bar.item text="College Rooms" icon="building-office" :current="request()->routeIs('college-rooms.index', 'college-rooms.*')"
-                            :route="route('college-rooms.index')" />
-                    @endif
+                        @if (Auth::user()?->canAccessCollegeRooms())
+                            <x-side-bar.item text="College Rooms" icon="building-office" :current="request()->routeIs('college-rooms.index', 'college-rooms.*')"
+                                :route="route('college-rooms.index')" />
+                        @endif
 
-                    @if (Auth::user()?->canAccessDepartmentRooms())
-                        <x-side-bar.item text="Department Rooms" icon="building-office" :current="request()->routeIs('rooms.index', 'rooms.*')"
-                            :route="route('rooms.index')" />
-                    @endif
+                        @if (Auth::user()?->canAccessDepartmentRooms())
+                            <x-side-bar.item text="Department Rooms" icon="building-office" :current="request()->routeIs('rooms.index', 'rooms.*')"
+                                :route="route('rooms.index')" />
+                        @endif
 
 
-                    @can('programs.view')
-                        <x-side-bar.item text="Programs" icon="academic-cap" :current="request()->routeIs('programs.index', 'programs.*')" :route="route('programs.index')" />
-                    @endcan
+                        @can('programs.view')
+                            <x-side-bar.item text="Programs" icon="academic-cap" :current="request()->routeIs('programs.index', 'programs.*')" :route="route('programs.index')" />
+                        @endcan
 
-                    @can('subjects.view')
-                        <x-side-bar.item text="Subjects" icon="book-open" :current="request()->routeIs('subjects.index', 'subjects.*')" :route="route('subjects.index')" />
-                    @endcan
-                </x-side-bar.item>
+                        @can('subjects.view')
+                            <x-side-bar.item text="Subjects" icon="book-open" :current="request()->routeIs('subjects.index', 'subjects.*')" :route="route('subjects.index')" />
+                        @endcan
+                    </x-side-bar.item>
+                @endif
 
                 {{-- SUPERADMIN ADMIN LINKS --}}
                 @canany(['campuses.view', 'users.view', 'roles.view', 'permissions.view', 'room_categories.view',
