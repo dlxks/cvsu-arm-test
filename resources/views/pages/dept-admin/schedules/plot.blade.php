@@ -1,7 +1,6 @@
 <?php
 
 use App\Livewire\Forms\DeptAdmin\PlotScheduleForm;
-use App\Models\CurriculumEntry;
 use App\Models\Room;
 use App\Models\Schedule;
 use App\Models\ScheduleCategory;
@@ -21,13 +20,19 @@ new class extends Component {
     public PlotScheduleForm $form;
 
     public int $campusId;
+
     public int $collegeId;
+
     public ?int $departmentId = null;
+
     public string $campusName = '-';
+
     public string $collegeName = '-';
+
     public string $departmentName = '-';
 
     public bool $facultyConflict = false;
+
     public bool $roomConflict = false;
 
     public function mount(): void
@@ -272,7 +277,7 @@ new class extends Component {
             </div>
 
             <div class="flex justify-end">
-                <x-button color="primary" text="Plot Schedule" wire:click="plot" />
+                <x-button color="primary" text="Plot Schedule" wire:click="plot" sm />
             </div>
         </div>
     </x-card>

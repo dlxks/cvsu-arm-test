@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Livewire\Forms\DeptAdmin;
 
+use App\Enums\PermissionEnum;
 use App\Models\CurriculumEntry;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Livewire\Form;
 
@@ -44,6 +46,9 @@ class BulkGenerateScheduleForm extends Form
         $this->program_id = null;
         $this->year_level = null;
         $this->section_count = 1;
+        if (! $this->canModifySlots()) {
+            $this->slots = 40;
+        }
     }
 
     /**
@@ -65,7 +70,14 @@ class BulkGenerateScheduleForm extends Form
             'semester' => ['required', Rule::in(array_keys(CurriculumEntry::SEMESTERS))],
             'school_year' => ['required', 'regex:/^\d{4}-\d{4}$/'],
             'section_count' => ['required', 'integer', 'min:1', 'max:30'],
-            'slots' => ['required', 'integer', 'min:1', 'max:500'],
+            'slots' => $this->canModifySlots()
+                ? ['required', 'integer', 'min:1', 'max:500']
+                : ['integer', 'min:1', 'max:500'],
         ];
+    }
+
+    private function canModifySlots(): bool
+    {
+        return Auth::user()?->can(PermissionEnum::SCHEDULE_SLOT_MODIFY->value) ?? false;
     }
 }

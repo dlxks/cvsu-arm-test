@@ -35,6 +35,7 @@ enum PermissionEnum: string
     case SCHEDULE_DELETE = 'schedules.delete';
     case SCHEDULE_RESTORE = 'schedules.restore';
     case SCHEDULE_ASSIGN = 'schedules.assign';
+    case SCHEDULE_SLOT_MODIFY = 'schedules.slot_modify';
 
     // Schedule Request Process
     case SCHEDULE_REQUEST_CREATE = 'schedule_requests.create';

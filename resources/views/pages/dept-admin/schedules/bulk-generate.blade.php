@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\PermissionEnum;
 use App\Livewire\Forms\DeptAdmin\BulkGenerateScheduleForm;
 use App\Models\CurriculumEntry;
 use App\Models\Program;
@@ -16,11 +17,21 @@ new class extends Component {
     public BulkGenerateScheduleForm $form;
 
     public int $campusId;
+
     public int $collegeId;
+
     public ?int $departmentId = null;
+
     public string $campusName = '-';
+
     public string $collegeName = '-';
+
     public string $departmentName = '-';
+
+    public function canModifySlots(): bool
+    {
+        return auth()->user()?->can(PermissionEnum::SCHEDULE_SLOT_MODIFY->value) ?? false;
+    }
 
     public function mount(): void
     {
@@ -83,6 +94,8 @@ new class extends Component {
 
         $validated = $this->form->validateForm();
 
+        $slots = $this->canModifySlots() ? (int) $validated['slots'] : 40;
+
         $program = Program::query()->findOrFail((int) $validated['program_id']);
 
         $generated = app(ScheduleGenerationService::class)->generateBlockSchedules([
@@ -95,7 +108,7 @@ new class extends Component {
             'semester' => $validated['semester'],
             'school_year' => $validated['school_year'],
             'section_count' => (int) $validated['section_count'],
-            'slots' => (int) $validated['slots'],
+            'slots' => $slots,
         ]);
 
         $this->form->resetAfterSubmit();
@@ -109,7 +122,7 @@ new class extends Component {
 <div class="space-y-6">
     <div class="flex items-center justify-between">
         <div>
-            <h1 class="text-xl font-bold dark:text-white">Bulk Block Generation</h1>
+            <h1 class="text-xl font-bold dark:text-white">Schedule Generation</h1>
             <p class="text-sm text-zinc-500 dark:text-zinc-400">
                 {{ $campusName }} | {{ $collegeName }} | {{ $departmentName }}
             </p>
@@ -137,12 +150,14 @@ new class extends Component {
                 <x-input label="School Year (YYYY-YYYY)" wire:model="form.school_year" />
                 <x-input label="Number of Sections" type="number" wire:model="form.section_count" min="1"
                     max="30" />
-                <x-input label="Slots per Section" type="number" wire:model="form.slots" min="1"
-                    max="500" />
+                @if ($this->canModifySlots())
+                    <x-input label="Number of Slots" type="number" wire:model="form.slots" min="1"
+                        max="500" />
+                @endif
             </div>
 
             <div class="flex justify-end">
-                <x-button color="primary" text="Generate Block Schedules" wire:click="generate" />
+                <x-button color="primary" icon="inbox-arrow-down" text="Generate Schedules" sm wire:click="generate" />
             </div>
         </div>
     </x-card>

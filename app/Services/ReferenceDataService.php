@@ -39,17 +39,16 @@ class ReferenceDataService
     }
 
     /**
-     * Get all non-deleted permissions as select options, cached for 1 hour.
+     * Get all non-deleted permissions as select options.
      */
     public function permissions(): array
     {
-        return cache()->remember('reference-data:permissions', 3600, fn () => Permission::query()
+        return Permission::query()
             ->whereNull('deleted_at')
             ->orderBy('name')
             ->get(['name'])
             ->map(fn ($permission) => ['label' => $permission->display_name, 'value' => $permission->name])
-            ->toArray()
-        );
+            ->toArray();
     }
 
     /**
@@ -98,18 +97,17 @@ class ReferenceDataService
     }
 
     /**
-     * Get all permissions as select options with permission names as labels, cached for 1 hour.
+     * Get all permissions as select options with permission names as labels.
      * Used in assignments page where permission name is displayed as label.
      */
     public function permissionsAsNames(): array
     {
-        return cache()->remember('reference-data:permissions-as-names', 3600, fn () => Permission::query()
+        return Permission::query()
             ->whereNull('deleted_at')
             ->orderBy('name')
             ->get(['name'])
             ->map(fn ($permission) => ['label' => $permission->name, 'value' => $permission->name])
-            ->toArray()
-        );
+            ->toArray();
     }
 
     /**

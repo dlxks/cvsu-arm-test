@@ -15,8 +15,7 @@ class ScheduleGenerationService
     public function __construct(
         private readonly ScheduleCodeGenerator $codeGenerator,
         private readonly NstpConstraintService $nstpConstraintService,
-    ) {
-    }
+    ) {}
 
     /**
      * @param  array<string, mixed>  $payload

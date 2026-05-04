@@ -98,7 +98,8 @@
                         @endcan
 
                         @can('schedules.create')
-                            <x-side-bar.item text="Bulk Generate" icon="squares-plus" :current="request()->routeIs('schedules.bulk-generate')" :route="route('schedules.bulk-generate')" />
+                            <x-side-bar.item text="Generate Schedule" icon="squares-plus" :current="request()->routeIs('schedules.bulk-generate')"
+                                :route="route('schedules.bulk-generate')" />
 
                             <x-side-bar.item text="Custom Schedule" icon="plus-circle" :current="request()->routeIs('schedules.custom-section')"
                                 :route="route('schedules.custom-section')" />
