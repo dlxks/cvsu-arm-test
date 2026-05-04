@@ -1,5 +1,6 @@
 <?php
 
+use App\Livewire\Forms\DeptAdmin\PlotScheduleForm;
 use App\Models\CurriculumEntry;
 use App\Models\Room;
 use App\Models\Schedule;
@@ -9,7 +10,6 @@ use App\Models\User;
 use App\Services\ScheduleConflictService;
 use App\Services\SchedulePlottingService;
 use App\Traits\CanManage;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
@@ -18,21 +18,14 @@ use TallStackUi\Traits\Interactions;
 new class extends Component {
     use CanManage, Interactions;
 
+    public PlotScheduleForm $form;
+
     public int $campusId;
     public int $collegeId;
     public ?int $departmentId = null;
     public string $campusName = '-';
     public string $collegeName = '-';
     public string $departmentName = '-';
-
-    // Plot form
-    public ?int $plotScheduleId = null;
-    public ?int $plotScheduleCategoryId = null;
-    public ?string $plotDay = null;
-    public ?string $plotTimeIn = null;
-    public ?string $plotTimeOut = null;
-    public ?int $plotFacultyId = null;
-    public ?int $plotRoomId = null;
 
     public bool $facultyConflict = false;
     public bool $roomConflict = false;
@@ -59,7 +52,7 @@ new class extends Component {
         $requestedScheduleId = request()->integer('schedule');
 
         if ($requestedScheduleId > 0) {
-            $this->plotScheduleId = $requestedScheduleId;
+            $this->form->schedule_id = $requestedScheduleId;
         }
     }
 
@@ -102,13 +95,13 @@ new class extends Component {
             ->where(function ($query) {
                 $query->where('is_active', true);
 
-                if (filled($this->plotScheduleCategoryId)) {
-                    $query->orWhere('id', $this->plotScheduleCategoryId);
+                if (filled($this->form->schedule_category_id)) {
+                    $query->orWhere('id', $this->form->schedule_category_id);
                 }
             })
             ->orderBy('name', 'asc')
             ->get(['id', 'name'])
-            ->map(fn (ScheduleCategory $category) => ['label' => $category->name, 'value' => (int) $category->id])
+            ->map(fn(ScheduleCategory $category) => ['label' => $category->name, 'value' => (int) $category->id])
             ->values()
             ->toArray();
     }
@@ -156,14 +149,7 @@ new class extends Component {
     public function plottedSchedules()
     {
         return Schedule::query()
-            ->with([
-                'subject:id,code,title',
-                'sections:id,schedule_id,computed_section_name',
-                'roomTimes:id,schedule_id,schedule_category_id,day,time_in,time_out,room_id',
-                'roomTimes.scheduleCategory:id,name',
-                'roomTimes.room:id,name',
-                'facultyAssignments.user:id,name',
-            ])
+            ->with(['subject:id,code,title', 'sections:id,schedule_id,computed_section_name', 'roomTimes:id,schedule_id,schedule_category_id,day,time_in,time_out,room_id', 'roomTimes.scheduleCategory:id,name', 'roomTimes.room:id,name', 'facultyAssignments.user:id,name'])
             ->where('campus_id', $this->campusId)
             ->where('college_id', $this->collegeId)
             ->when($this->departmentId !== null, fn($q) => $q->where('department_id', $this->departmentId))
@@ -173,29 +159,11 @@ new class extends Component {
             ->get();
     }
 
-    public function updatedPlotFacultyId(): void
+    public function updated(string $property): void
     {
-        $this->checkConflicts();
-    }
-    public function updatedPlotRoomId(): void
-    {
-        $this->checkConflicts();
-    }
-    public function updatedPlotDay(): void
-    {
-        $this->checkConflicts();
-    }
-    public function updatedPlotTimeIn(): void
-    {
-        $this->checkConflicts();
-    }
-    public function updatedPlotTimeOut(): void
-    {
-        $this->checkConflicts();
-    }
-    public function updatedPlotScheduleCategoryId(): void
-    {
-        $this->checkConflicts();
+        if (in_array($property, ['form.schedule_category_id', 'form.day', 'form.time_in', 'form.time_out', 'form.faculty_id', 'form.room_id', 'form.schedule_id'], true)) {
+            $this->checkConflicts();
+        }
     }
 
     private function checkConflicts(): void
@@ -203,18 +171,18 @@ new class extends Component {
         $this->facultyConflict = false;
         $this->roomConflict = false;
 
-        if (!$this->plotDay || !$this->plotTimeIn || !$this->plotTimeOut) {
+        if (!$this->form->day || !$this->form->time_in || !$this->form->time_out) {
             return;
         }
 
         $conflict = app(ScheduleConflictService::class);
 
-        if ($this->plotFacultyId) {
-            $this->facultyConflict = $conflict->hasFacultyConflict($this->plotFacultyId, $this->plotDay, $this->plotTimeIn, $this->plotTimeOut, $this->plotScheduleCategoryId, $this->plotScheduleId);
+        if ($this->form->faculty_id) {
+            $this->facultyConflict = $conflict->hasFacultyConflict($this->form->faculty_id, $this->form->day, $this->form->time_in, $this->form->time_out, $this->form->schedule_category_id, $this->form->schedule_id);
         }
 
-        if ($this->plotRoomId) {
-            $this->roomConflict = $conflict->hasRoomConflict($this->plotRoomId, $this->plotDay, $this->plotTimeIn, $this->plotTimeOut, $this->plotScheduleId);
+        if ($this->form->room_id) {
+            $this->roomConflict = $conflict->hasRoomConflict($this->form->room_id, $this->form->day, $this->form->time_in, $this->form->time_out, $this->form->schedule_id);
         }
     }
 
@@ -222,39 +190,29 @@ new class extends Component {
     {
         $this->ensureCanManage('schedules.assign');
 
-        $validated = $this->validate([
-            'plotScheduleId' => ['required', 'integer', 'exists:schedules,id'],
-            'plotScheduleCategoryId' => ['required', 'integer', Rule::exists('schedule_categories', 'id')->where(fn ($query) => $query->where('is_active', true)->orWhere('id', $this->plotScheduleCategoryId))],
-            'plotDay' => ['nullable', Rule::in(ScheduleRoomTime::DAYS)],
-            'plotTimeIn' => ['nullable', 'date_format:H:i'],
-            'plotTimeOut' => ['nullable', 'date_format:H:i', 'after:plotTimeIn'],
-            'plotFacultyId' => ['nullable', 'integer', 'exists:users,id'],
-            'plotRoomId' => ['nullable', 'integer', 'exists:rooms,id'],
-        ]);
+        $validated = $this->form->validateForm();
 
         try {
-            app(SchedulePlottingService::class)->plot(
-                (int) $validated['plotScheduleId'],
-                array_filter(
-                    [
-                        'schedule_category_id' => $validated['plotScheduleCategoryId'],
-                        'day' => $validated['plotDay'] ?? null,
-                        'time_in' => $validated['plotTimeIn'] ?? null,
-                        'time_out' => $validated['plotTimeOut'] ?? null,
-                        'user_id' => $validated['plotFacultyId'] ?? null,
-                        'room_id' => $validated['plotRoomId'] ?? null,
-                    ],
-                    fn($v) => $v !== null,
-                ),
-            );
+            app(SchedulePlottingService::class)->plot((int) $validated['schedule_id'], $this->form->payload($validated));
         } catch (ValidationException $e) {
             foreach ($e->errors() as $key => $messages) {
-                $this->addError($key, $messages[0]);
+                $mappedKey = match ($key) {
+                    'schedule_category_id' => 'form.schedule_category_id',
+                    'day' => 'form.day',
+                    'time_in' => 'form.time_in',
+                    'time_out' => 'form.time_out',
+                    'user_id' => 'form.faculty_id',
+                    'room_id' => 'form.room_id',
+                    default => 'form.' . $key,
+                };
+
+                $this->addError($mappedKey, $messages[0]);
             }
+
             return;
         }
 
-        $this->reset(['plotScheduleId', 'plotFacultyId', 'plotRoomId', 'plotScheduleCategoryId']);
+        $this->form->resetAfterSubmit();
         $this->facultyConflict = false;
         $this->roomConflict = false;
         $this->toast()->success('Plotted', 'Schedule has been plotted.')->send();
@@ -296,20 +254,20 @@ new class extends Component {
 
             <div class="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
                 <div class="md:col-span-2 lg:col-span-3">
-                    <x-select.styled label="Schedule" wire:model="plotScheduleId" :options="$this->scheduleOptions"
+                    <x-select.styled label="Schedule" wire:model="form.schedule_id" :options="$this->scheduleOptions"
                         select="label:label|value:value" searchable />
                 </div>
 
-                <x-select.styled label="Schedule Category" wire:model.live="plotScheduleCategoryId" :options="$this->scheduleCategoryOptions"
+                <x-select.styled label="Schedule Category" wire:model.live="form.schedule_category_id" :options="$this->scheduleCategoryOptions"
                     select="label:label|value:value" />
-                <x-select.styled label="Day" wire:model.live="plotDay" :options="$this->dayOptions"
+                <x-select.styled label="Day" wire:model.live="form.day" :options="$this->dayOptions"
                     select="label:label|value:value" />
-                <x-input label="Time In" type="time" wire:model.live="plotTimeIn" />
-                <x-input label="Time Out" type="time" wire:model.live="plotTimeOut" />
+                <x-input label="Time In" type="time" wire:model.live="form.time_in" />
+                <x-input label="Time Out" type="time" wire:model.live="form.time_out" />
 
-                <x-select.styled label="Faculty" wire:model.live="plotFacultyId" :options="$this->facultyOptions"
+                <x-select.styled label="Faculty" wire:model.live="form.faculty_id" :options="$this->facultyOptions"
                     select="label:label|value:value" searchable />
-                <x-select.styled label="Room" wire:model.live="plotRoomId" :options="$this->roomOptions"
+                <x-select.styled label="Room" wire:model.live="form.room_id" :options="$this->roomOptions"
                     select="label:label|value:value" searchable />
             </div>
 

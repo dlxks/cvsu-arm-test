@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use App\Models\ScheduleServiceRequest;
 use App\Services\ScheduleWorkflowService;
 use App\Traits\CanManage;
@@ -19,7 +21,7 @@ new class extends Component {
 
     public function mount(): void
     {
-        $this->ensureCanManage('schedules.view');
+        $this->ensureCanManage('schedule_requests.view');
 
         $user = auth()
             ->guard()
@@ -50,7 +52,7 @@ new class extends Component {
 
     public function submit(int $serviceRequestId): void
     {
-        $this->ensureCanManage('schedules.view');
+        $this->ensureCanManage('schedule_requests.update');
 
         $request = ScheduleServiceRequest::query()->findOrFail($serviceRequestId);
         abort_unless($this->departmentId !== null && (int) $request->assigned_department_id === $this->departmentId, 403);
@@ -62,7 +64,7 @@ new class extends Component {
 
     public function removeSchedule(int $serviceRequestId, int $scheduleId): void
     {
-        $this->ensureCanManage('schedules.view');
+        $this->ensureCanManage('schedule_requests.update');
 
         $request = ScheduleServiceRequest::query()->findOrFail($serviceRequestId);
         abort_unless($this->departmentId !== null && (int) $request->assigned_department_id === $this->departmentId, 403);
@@ -109,11 +111,13 @@ new class extends Component {
                                 <x-badge color="emerald" text="Submitted" />
                             @endif
 
-                            @if ($sr->status === 'assigned_to_dept' && $departmentId !== null && (int) $sr->assigned_department_id === $departmentId)
-                                <x-button size="sm" color="primary" text="Submit to College Admin"
-                                    wire:click="submit({{ $sr->id }})"
-                                    wire:confirm="Submit all plotted schedules back to the college admin?" />
-                            @endif
+                            @can('schedule_requests.update')
+                                @if ($sr->status === 'assigned_to_dept' && $departmentId !== null && (int) $sr->assigned_department_id === $departmentId)
+                                    <x-button size="sm" color="primary" text="Submit to College Admin"
+                                        wire:click="submit({{ $sr->id }})"
+                                        wire:confirm="Submit all plotted schedules back to the college admin?" />
+                                @endif
+                            @endcan
                         </div>
                     </div>
 
@@ -155,9 +159,11 @@ new class extends Component {
                                                         class="inline-flex items-center gap-1 rounded border border-blue-500 px-2 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30">
                                                         <x-icon name="pencil-square" class="h-3.5 w-3.5" /> Plot
                                                     </a>
-                                                    <x-button size="xs" color="red" text="Remove"
-                                                        wire:click="removeSchedule({{ $sr->id }}, {{ $schedule->id }})"
-                                                        wire:confirm="Remove this schedule from the request?" />
+                                                    @can('schedule_requests.update')
+                                                        <x-button size="xs" color="red" text="Remove"
+                                                            wire:click="removeSchedule({{ $sr->id }}, {{ $schedule->id }})"
+                                                            wire:confirm="Remove this schedule from the request?" />
+                                                    @endcan
                                                 </div>
                                             </td>
                                         @endif

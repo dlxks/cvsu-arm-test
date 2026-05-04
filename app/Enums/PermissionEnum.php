@@ -35,11 +35,21 @@ enum PermissionEnum: string
     case SCHEDULE_DELETE = 'schedules.delete';
     case SCHEDULE_RESTORE = 'schedules.restore';
     case SCHEDULE_ASSIGN = 'schedules.assign';
+
+    // Schedule Request Process
+    case SCHEDULE_REQUEST_CREATE = 'schedule_requests.create';
+    case SCHEDULE_REQUEST_UPDATE = 'schedule_requests.update';
+    case SCHEDULE_REQUEST_DELETE = 'schedule_requests.delete';
+    case SCHEDULE_REQUEST_RESTORE = 'schedule_requests.restore';
+    case SCHEDULE_REQUEST_APPROVE = 'schedule_requests.approve';
+
+    // Schedule Category Management
     case SCHEDULE_CATEGORY_VIEW = 'schedule_categories.view';
     case SCHEDULE_CATEGORY_CREATE = 'schedule_categories.create';
     case SCHEDULE_CATEGORY_UPDATE = 'schedule_categories.update';
     case SCHEDULE_CATEGORY_DELETE = 'schedule_categories.delete';
     case SCHEDULE_CATEGORY_RESTORE = 'schedule_categories.restore';
+    case SCHEDULE_REQUEST_VIEW = 'schedule_requests.view';
 
     // Faculty Profiles Management
     case FACULTY_PROFILE_CREATE = 'faculty_profiles.create';

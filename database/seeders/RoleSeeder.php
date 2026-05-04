@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Database\Seeders;
 
 use App\Enums\PermissionEnum;
@@ -39,6 +41,13 @@ class RoleSeeder extends Seeder
                 PermissionEnum::SCHEDULE_RESTORE->value,
                 PermissionEnum::SCHEDULE_ASSIGN->value,
 
+                PermissionEnum::SCHEDULE_REQUEST_VIEW->value,
+                PermissionEnum::SCHEDULE_REQUEST_CREATE->value,
+                PermissionEnum::SCHEDULE_REQUEST_UPDATE->value,
+                PermissionEnum::SCHEDULE_REQUEST_DELETE->value,
+                PermissionEnum::SCHEDULE_REQUEST_RESTORE->value,
+                PermissionEnum::SCHEDULE_REQUEST_APPROVE->value,
+
                 PermissionEnum::FACULTY_PROFILE_CREATE->value,
                 PermissionEnum::FACULTY_PROFILE_VIEW->value,
                 PermissionEnum::FACULTY_PROFILE_UPDATE->value,
@@ -75,6 +84,8 @@ class RoleSeeder extends Seeder
                 PermissionEnum::SCHEDULE_VIEW->value,
                 PermissionEnum::SCHEDULE_UPDATE->value,
                 PermissionEnum::SCHEDULE_ASSIGN->value,
+                PermissionEnum::SCHEDULE_REQUEST_VIEW->value,
+                PermissionEnum::SCHEDULE_REQUEST_UPDATE->value,
 
                 PermissionEnum::FACULTY_PROFILE_CREATE->value,
                 PermissionEnum::FACULTY_PROFILE_VIEW->value,

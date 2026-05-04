@@ -22,7 +22,7 @@ describe('dashboard resolver', function () {
             ->assertRedirect(route('login'));
     });
 
-    it('dashboard resolver uses configured role priority for multi role users', function () {
+        it('renders the dashboard for multi role users with valid permissions', function () {
         $user = User::factory()->create();
         /** @var User $user */
         $user->assignRole(['faculty', 'deptAdmin']);
@@ -30,10 +30,11 @@ describe('dashboard resolver', function () {
 
         $this->actingAs($user)
             ->get(route('dashboard'))
-            ->assertRedirect(route('schedules.plot'));
+            ->assertOk()
+            ->assertSee('Dashboard');
     });
 
-    it('dashboard resolver allows dept admins with permission only', function () {
+    it('renders dashboard content for dept admins with permission only', function () {
         $user = User::factory()->create();
         /** @var User $user */
         $user->assignRole(['faculty', 'deptAdmin']);
@@ -41,10 +42,11 @@ describe('dashboard resolver', function () {
 
         $this->actingAs($user)
             ->get(route('dashboard'))
-            ->assertRedirect(route('schedules.plot'));
+            ->assertOk()
+            ->assertSee('Schedule Status');
     });
 
-    it('dashboard resolver allows college access with permission only', function () {
+    it('renders dashboard content for college users with permission only', function () {
         $user = User::factory()->create();
         /** @var User $user */
         $user->assignRole('faculty');
@@ -52,15 +54,17 @@ describe('dashboard resolver', function () {
 
         $this->actingAs($user)
             ->get(route('dashboard'))
-            ->assertRedirect(route('departments.index'));
+            ->assertOk()
+            ->assertSee('permission(s) available to this account');
     });
 
-    it('dashboard resolver returns forbidden for users without valid dashboard', function () {
+    it('renders fallback dashboard message for users without permissions', function () {
         $user = User::factory()->create();
         /** @var User $user */
 
         $this->actingAs($user)
             ->get(route('dashboard'))
-            ->assertForbidden();
+            ->assertOk()
+            ->assertSee('No dashboard widgets are currently available for your account.');
     });
 });

@@ -1,7 +1,6 @@
 <?php
 
 use App\Http\Controllers\Auth\GoogleAuthController;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -20,17 +19,11 @@ Route::middleware('guests')->group(function () {
 });
 
 /*
-|---------------------------------------------------------------------------
-| DASHBOARD (SINGLE ENTRY POINT)
-|---------------------------------------------------------------------------
+|--------------------------------------------------------------------------
+| AUTHENTICATED ROUTES
+|--------------------------------------------------------------------------
 */
-Route::middleware('auth')->get('/dashboard', function () {
-    $dashboardRoute = Auth::user()?->dashboardRoute();
-
-    abort_unless($dashboardRoute && Route::has($dashboardRoute), 403, 'You do not have a valid permission assigned.');
-
-    return redirect()->route($dashboardRoute);
-})->name('dashboard');
+Route::livewire('/dashboard', 'pages::dashboard.index')->middleware('auth')->name('dashboard');
 
 /*
 |--------------------------------------------------------------------------

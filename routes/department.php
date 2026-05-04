@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth'])
@@ -35,6 +37,6 @@ Route::middleware(['auth'])
             ->name('schedules.plot');
 
         Route::livewire('/schedules/service-requests', 'pages::dept-admin.schedules.service-requests')
-            ->middleware('permission:schedules.view')
+            ->middleware('permission:schedule_requests.view')
             ->name('schedules.service-requests');
     });

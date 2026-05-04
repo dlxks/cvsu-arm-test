@@ -1,11 +1,11 @@
 <?php
 
+use App\Livewire\Forms\DeptAdmin\BulkGenerateScheduleForm;
 use App\Models\CurriculumEntry;
 use App\Models\Program;
 use App\Models\Schedule;
 use App\Services\ScheduleGenerationService;
 use App\Traits\CanManage;
-use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 use TallStackUi\Traits\Interactions;
@@ -13,19 +13,14 @@ use TallStackUi\Traits\Interactions;
 new class extends Component {
     use CanManage, Interactions;
 
+    public BulkGenerateScheduleForm $form;
+
     public int $campusId;
     public int $collegeId;
     public ?int $departmentId = null;
     public string $campusName = '-';
     public string $collegeName = '-';
     public string $departmentName = '-';
-
-    public ?int $bulkProgramId = null;
-    public ?int $bulkYearLevel = null;
-    public string $bulkSemester = '1ST';
-    public string $bulkSchoolYear = '';
-    public int $bulkSectionCount = 1;
-    public int $bulkSlots = 40;
 
     public function mount(): void
     {
@@ -47,7 +42,7 @@ new class extends Component {
         $this->departmentName = $profile->department?->name ?? 'College-wide';
 
         $year = (int) now()->format('Y');
-        $this->bulkSchoolYear = $year . '-' . ($year + 1);
+        $this->form->resetForm($year . '-' . ($year + 1));
     }
 
     #[Computed]
@@ -86,16 +81,9 @@ new class extends Component {
     {
         $this->ensureCanManage('schedules.create');
 
-        $validated = $this->validate([
-            'bulkProgramId' => ['required', 'integer', 'exists:programs,id'],
-            'bulkYearLevel' => ['required', 'integer', 'min:1', 'max:8'],
-            'bulkSemester' => ['required', Rule::in(array_keys(CurriculumEntry::SEMESTERS))],
-            'bulkSchoolYear' => ['required', 'regex:/^\d{4}-\d{4}$/'],
-            'bulkSectionCount' => ['required', 'integer', 'min:1', 'max:30'],
-            'bulkSlots' => ['required', 'integer', 'min:1', 'max:500'],
-        ]);
+        $validated = $this->form->validateForm();
 
-        $program = Program::query()->findOrFail((int) $validated['bulkProgramId']);
+        $program = Program::query()->findOrFail((int) $validated['program_id']);
 
         $generated = app(ScheduleGenerationService::class)->generateBlockSchedules([
             'campus_id' => $this->campusId,
@@ -103,14 +91,14 @@ new class extends Component {
             'department_id' => $this->departmentId,
             'program_id' => $program->id,
             'program_code' => $program->code,
-            'year_level' => (int) $validated['bulkYearLevel'],
-            'semester' => $validated['bulkSemester'],
-            'school_year' => $validated['bulkSchoolYear'],
-            'section_count' => (int) $validated['bulkSectionCount'],
-            'slots' => (int) $validated['bulkSlots'],
+            'year_level' => (int) $validated['year_level'],
+            'semester' => $validated['semester'],
+            'school_year' => $validated['school_year'],
+            'section_count' => (int) $validated['section_count'],
+            'slots' => (int) $validated['slots'],
         ]);
 
-        $this->reset(['bulkProgramId', 'bulkYearLevel', 'bulkSectionCount']);
+        $this->form->resetAfterSubmit();
         $this->toast()
             ->success('Generated', $generated->count() . ' schedule(s) created.')
             ->send();
@@ -141,15 +129,15 @@ new class extends Component {
             </div>
 
             <div class="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-                <x-select.styled label="Program" wire:model="bulkProgramId" :options="$this->programOptions"
+                <x-select.styled label="Program" wire:model="form.program_id" :options="$this->programOptions"
                     select="label:label|value:value" searchable />
-                <x-input label="Year Level" type="number" wire:model="bulkYearLevel" min="1" max="8" />
-                <x-select.styled label="Semester" wire:model="bulkSemester" :options="$this->semesterOptions"
+                <x-input label="Year Level" type="number" wire:model="form.year_level" min="1" max="8" />
+                <x-select.styled label="Semester" wire:model="form.semester" :options="$this->semesterOptions"
                     select="label:label|value:value" />
-                <x-input label="School Year (YYYY-YYYY)" wire:model="bulkSchoolYear" />
-                <x-input label="Number of Sections" type="number" wire:model="bulkSectionCount" min="1"
+                <x-input label="School Year (YYYY-YYYY)" wire:model="form.school_year" />
+                <x-input label="Number of Sections" type="number" wire:model="form.section_count" min="1"
                     max="30" />
-                <x-input label="Slots per Section" type="number" wire:model="bulkSlots" min="1"
+                <x-input label="Slots per Section" type="number" wire:model="form.slots" min="1"
                     max="500" />
             </div>
 

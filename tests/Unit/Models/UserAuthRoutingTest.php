@@ -4,6 +4,7 @@ use App\Models\EmployeeProfile;
 use App\Models\Permission;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
 
 uses(TestCase::class, RefreshDatabase::class);
@@ -71,6 +72,12 @@ describe('User model', function () {
         $user->givePermissionTo('campuses.view');
 
         expect($user->fresh()->dashboardRoute())->toBe('campuses.index');
+    });
+
+    it('ensures every configured dashboard route exists in the route registry', function () {
+        foreach (array_keys(User::DASHBOARD_ACCESS) as $dashboardRoute) {
+            expect(Route::has($dashboardRoute))->toBeTrue("Configured dashboard route [{$dashboardRoute}] is missing.");
+        }
     });
 
     it('allows dept admin dashboard routing with permission only', function () {

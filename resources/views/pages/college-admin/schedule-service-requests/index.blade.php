@@ -1,5 +1,9 @@
 <?php
 
+declare(strict_types=1);
+
+use App\Livewire\Forms\CollegeAdmin\AssignDepartmentForm;
+use App\Livewire\Forms\CollegeAdmin\CreateScheduleServiceRequestForm;
 use App\Models\College;
 use App\Models\Department;
 use App\Models\Schedule;
@@ -14,29 +18,21 @@ use TallStackUi\Traits\Interactions;
 new class extends Component {
     use CanManage, Interactions;
 
+    public CreateScheduleServiceRequestForm $requestForm;
+
+    public AssignDepartmentForm $assignForm;
+
     public int $collegeId;
 
     public string $collegeName = '-';
-
-    /** @var array<int> */
-    public array $requestScheduleIds = [];
-
-    /** @var array<int, string> */
-    public array $requestSectionNames = [];
-
-    public ?int $requestServicingCollegeId = null;
 
     public string $incomingStatusFilter = '';
 
     public bool $assignModal = false;
 
-    public ?int $assignServiceRequestId = null;
-
-    public ?int $assignDepartmentId = null;
-
     public function mount(): void
     {
-        $this->ensureCanManage('schedules.view');
+        $this->ensureCanManage('schedule_requests.view');
 
         $user = auth()
             ->guard()
@@ -87,7 +83,7 @@ new class extends Component {
     {
         return Schedule::query()
             ->with(['subject:id,code,title', 'sections:id,schedule_id,computed_section_name'])
-            ->whereIn('id', $this->requestScheduleIds)
+            ->whereIn('id', $this->requestForm->schedule_ids)
             ->orderBy('sched_code')
             ->get();
     }
@@ -151,36 +147,31 @@ new class extends Component {
 
     public function createRequest(): void
     {
-        $this->ensureCanManage('schedules.view');
+        $this->ensureCanManage('schedule_requests.create');
 
-        $validated = $this->validate([
-            'requestSectionNames' => ['required', 'array', 'min:1'],
-            'requestSectionNames.*' => ['string'],
-            'requestScheduleIds' => ['required', 'array', 'min:1'],
-            'requestScheduleIds.*' => ['integer', 'exists:schedules,id'],
-            'requestServicingCollegeId' => ['required', 'integer', 'exists:colleges,id'],
-        ]);
+        $validated = $this->requestForm->validateForm();
 
-        abort_if((int) $validated['requestServicingCollegeId'] === $this->collegeId, 422, 'Cannot send to own college.');
+        abort_if((int) $validated['servicing_college_id'] === $this->collegeId, 422, 'Cannot send to own college.');
 
-        app(ScheduleWorkflowService::class)->createServiceRequest($this->collegeId, (int) $validated['requestServicingCollegeId'], array_map('intval', $validated['requestScheduleIds']));
+        app(ScheduleWorkflowService::class)->createServiceRequest($this->collegeId, (int) $validated['servicing_college_id'], array_map('intval', $validated['schedule_ids']));
 
-        $this->reset(['requestSectionNames', 'requestScheduleIds', 'requestServicingCollegeId']);
+        $this->requestForm->resetForm();
         unset($this->outgoingRequests);
         $this->toast()->success('Submitted', 'Schedule request submitted successfully.')->send();
     }
 
-    public function updatedRequestSectionNames(): void
+    public function updatedRequestFormSectionNames(): void
     {
-        if ($this->requestSectionNames === []) {
-            $this->requestScheduleIds = [];
+        if ($this->requestForm->section_names === []) {
+            $this->requestForm->schedule_ids = [];
+
             return;
         }
 
-        $this->requestScheduleIds = Schedule::query()
+        $this->requestForm->schedule_ids = Schedule::query()
             ->where('college_id', $this->collegeId)
             ->whereIn('status', ['draft', 'pending_plotting', 'plotted'])
-            ->whereHas('sections', fn($query) => $query->whereIn('computed_section_name', $this->requestSectionNames))
+            ->whereHas('sections', fn($query) => $query->whereIn('computed_section_name', $this->requestForm->section_names))
             ->orderBy('id')
             ->pluck('id')
             ->map(fn($id) => (int) $id)
@@ -190,7 +181,7 @@ new class extends Component {
 
     public function acceptRequest(int $serviceRequestId): void
     {
-        $this->ensureCanManage('schedules.view');
+        $this->ensureCanManage('schedule_requests.approve');
         $this->assertIncomingRequest($serviceRequestId);
 
         app(ScheduleWorkflowService::class)->respondToServiceRequest($serviceRequestId, true);
@@ -200,7 +191,7 @@ new class extends Component {
 
     public function rejectRequest(int $serviceRequestId): void
     {
-        $this->ensureCanManage('schedules.view');
+        $this->ensureCanManage('schedule_requests.approve');
         $this->assertIncomingRequest($serviceRequestId);
 
         app(ScheduleWorkflowService::class)->respondToServiceRequest($serviceRequestId, false);
@@ -210,32 +201,28 @@ new class extends Component {
 
     public function openAssignModal(int $serviceRequestId): void
     {
-        $this->ensureCanManage('schedules.view');
+        $this->ensureCanManage('schedule_requests.approve');
         $this->assertIncomingRequest($serviceRequestId);
 
-        $this->assignServiceRequestId = $serviceRequestId;
-        $this->assignDepartmentId = null;
+        $this->assignForm->service_request_id = $serviceRequestId;
+        $this->assignForm->department_id = null;
         $this->assignModal = true;
     }
 
     public function assignToDepartment(): void
     {
-        $this->ensureCanManage('schedules.view');
+        $this->ensureCanManage('schedule_requests.approve');
 
-        $validated = $this->validate([
-            'assignServiceRequestId' => ['required', 'integer', 'exists:schedule_service_requests,id'],
-            'assignDepartmentId' => ['required', 'integer', 'exists:departments,id'],
-        ]);
+        $validated = $this->assignForm->validateForm();
 
-        $this->assertIncomingRequest((int) $validated['assignServiceRequestId']);
+        $this->assertIncomingRequest((int) $validated['service_request_id']);
 
-        $department = Department::query()->where('college_id', $this->collegeId)->findOrFail((int) $validated['assignDepartmentId']);
+        $department = Department::query()->where('college_id', $this->collegeId)->findOrFail((int) $validated['department_id']);
 
-        app(ScheduleWorkflowService::class)->assignToDepartment((int) $validated['assignServiceRequestId'], (int) $department->id);
+        app(ScheduleWorkflowService::class)->assignToDepartment((int) $validated['service_request_id'], (int) $department->id);
 
         $this->assignModal = false;
-        $this->assignServiceRequestId = null;
-        $this->assignDepartmentId = null;
+        $this->assignForm->resetForm();
         unset($this->incomingRequests);
 
         $this->toast()->success('Delegated', 'Schedule request delegated to department.')->send();
@@ -243,7 +230,7 @@ new class extends Component {
 
     public function completeRequest(int $serviceRequestId): void
     {
-        $this->ensureCanManage('schedules.view');
+        $this->ensureCanManage('schedule_requests.approve');
         $this->assertIncomingRequest($serviceRequestId);
 
         app(ScheduleWorkflowService::class)->completeRequest($serviceRequestId);
@@ -253,7 +240,7 @@ new class extends Component {
 
     public function cancelRequest(int $serviceRequestId): void
     {
-        $this->ensureCanManage('schedules.view');
+        $this->ensureCanManage('schedule_requests.delete');
         ScheduleServiceRequest::query()->whereKey($serviceRequestId)->where('requesting_college_id', $this->collegeId)->firstOrFail();
 
         app(ScheduleWorkflowService::class)->cancelRequest($serviceRequestId);
@@ -289,44 +276,46 @@ new class extends Component {
         </x-card>
     </div>
 
-    <x-card>
-        <div class="space-y-4">
-            <div>
-                <h2 class="text-lg font-semibold dark:text-white">Create Schedule Request</h2>
-                <p class="text-sm text-zinc-500 dark:text-zinc-400">Select one or more sections and all subjects
-                    under them will be auto-selected for the request.</p>
-            </div>
+    @can('schedule_requests.create')
+        <x-card>
+            <div class="space-y-4">
+                <div>
+                    <h2 class="text-lg font-semibold dark:text-white">Create Schedule Request</h2>
+                    <p class="text-sm text-zinc-500 dark:text-zinc-400">Select one or more sections and all subjects
+                        under them will be auto-selected for the request.</p>
+                </div>
 
-            <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
-                <x-select.styled label="Sections (bulk)" wire:model.live="requestSectionNames" :options="$this->sectionOptions"
-                    select="label:label|value:value" searchable multiple />
-                <x-select.styled label="Servicing College" wire:model="requestServicingCollegeId" :options="$this->servicingCollegeOptions"
-                    select="label:label|value:value" searchable />
-            </div>
+                <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    <x-select.styled label="Sections (bulk)" wire:model.live="requestForm.section_names" :options="$this->sectionOptions"
+                        select="label:label|value:value" searchable multiple />
+                    <x-select.styled label="Servicing College" wire:model="requestForm.servicing_college_id"
+                        :options="$this->servicingCollegeOptions" select="label:label|value:value" searchable />
+                </div>
 
-            <div class="rounded-lg border border-zinc-200 dark:border-zinc-700 p-3">
-                <p class="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                    Selected Subjects ({{ count($requestScheduleIds) }})
-                </p>
-                @if (count($requestScheduleIds) > 0)
-                    <div class="mt-2 flex flex-wrap gap-1.5">
-                        @foreach ($this->selectedSectionSchedules as $schedule)
-                            <span
-                                class="rounded bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 text-xs font-mono text-zinc-700 dark:text-zinc-300">
-                                {{ $schedule->subject?->code ?? '—' }}
-                            </span>
-                        @endforeach
-                    </div>
-                @else
-                    <p class="mt-2 text-sm text-zinc-400">Choose section(s) to auto-select their subjects.</p>
-                @endif
-            </div>
+                <div class="rounded-lg border border-zinc-200 dark:border-zinc-700 p-3">
+                    <p class="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                        Selected Subjects ({{ count($requestForm->schedule_ids) }})
+                    </p>
+                    @if (count($requestForm->schedule_ids) > 0)
+                        <div class="mt-2 flex flex-wrap gap-1.5">
+                            @foreach ($this->selectedSectionSchedules as $schedule)
+                                <span
+                                    class="rounded bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 text-xs font-mono text-zinc-700 dark:text-zinc-300">
+                                    {{ $schedule->subject?->code ?? '—' }}
+                                </span>
+                            @endforeach
+                        </div>
+                    @else
+                        <p class="mt-2 text-sm text-zinc-400">Choose section(s) to auto-select their subjects.</p>
+                    @endif
+                </div>
 
-            <div class="flex justify-end">
-                <x-button color="primary" text="Submit Schedule Request" wire:click="createRequest" />
+                <div class="flex justify-end">
+                    <x-button color="primary" text="Submit Schedule Request" wire:click="createRequest" />
+                </div>
             </div>
-        </div>
-    </x-card>
+        </x-card>
+    @endcan
 
     <x-card>
         <div class="space-y-4">
@@ -353,11 +342,13 @@ new class extends Component {
                                 'cancelled' => 'zinc',
                                 default => 'zinc',
                             }" round />
-                            @if (in_array($req->status, ['pending', 'accepted'], true))
-                                <x-button size="sm" outline color="red" text="Cancel"
-                                    wire:click="cancelRequest({{ $req->id }})"
-                                    wire:confirm="Cancel this schedule request? All attached schedules will revert to draft." />
-                            @endif
+                            @can('schedule_requests.delete')
+                                @if (in_array($req->status, ['pending', 'accepted'], true))
+                                    <x-button size="sm" outline color="red" text="Cancel"
+                                        wire:click="cancelRequest({{ $req->id }})"
+                                        wire:confirm="Cancel this schedule request? All attached schedules will revert to draft." />
+                                @endif
+                            @endcan
                         </div>
                         <div class="flex flex-wrap gap-1">
                             @foreach ($req->schedules as $schedule)
@@ -422,21 +413,23 @@ new class extends Component {
                                     default => 'slate',
                                 }" round />
 
-                                @if ($request->status === 'pending')
-                                    <x-button size="sm" color="primary" text="Accept"
-                                        wire:click="acceptRequest({{ $request->id }})" />
-                                    <x-button size="sm" color="red" text="Reject"
-                                        wire:click="rejectRequest({{ $request->id }})" />
-                                @endif
-                                @if (in_array($request->status, ['accepted', 'assigned_to_dept'], true))
-                                    <x-button size="sm" outline color="blue" text="Delegate to Dept"
-                                        wire:click="openAssignModal({{ $request->id }})" />
-                                @endif
-                                @if ($request->status === 'dept_submitted')
-                                    <x-button size="sm" color="emerald" text="Verify &amp; Complete"
-                                        wire:click="completeRequest({{ $request->id }})"
-                                        wire:confirm="Mark this request as completed and finalize all schedules?" />
-                                @endif
+                                @can('schedule_requests.approve')
+                                    @if ($request->status === 'pending')
+                                        <x-button size="sm" color="primary" text="Accept"
+                                            wire:click="acceptRequest({{ $request->id }})" />
+                                        <x-button size="sm" color="red" text="Reject"
+                                            wire:click="rejectRequest({{ $request->id }})" />
+                                    @endif
+                                    @if (in_array($request->status, ['accepted', 'assigned_to_dept'], true))
+                                        <x-button size="sm" outline color="blue" text="Delegate to Dept"
+                                            wire:click="openAssignModal({{ $request->id }})" />
+                                    @endif
+                                    @if ($request->status === 'dept_submitted')
+                                        <x-button size="sm" color="emerald" text="Verify &amp; Complete"
+                                            wire:click="completeRequest({{ $request->id }})"
+                                            wire:confirm="Mark this request as completed and finalize all schedules?" />
+                                    @endif
+                                @endcan
                             </div>
                         </div>
 
@@ -480,14 +473,16 @@ new class extends Component {
 
     <x-modal wire="assignModal" title="Delegate to Department" size="md">
         <div class="space-y-4">
-            <x-select.styled label="Department" wire:model="assignDepartmentId" :options="$this->assignDepartmentOptions"
+            <x-select.styled label="Department" wire:model="assignForm.department_id" :options="$this->assignDepartmentOptions"
                 select="label:label|value:value" searchable />
         </div>
 
         <x-slot:footer>
             <div class="flex justify-end gap-2">
                 <x-button flat text="Cancel" wire:click="$set('assignModal', false)" sm />
-                <x-button color="primary" text="Assign" wire:click="assignToDepartment" sm />
+                @can('schedule_requests.approve')
+                    <x-button color="primary" text="Assign" wire:click="assignToDepartment" sm />
+                @endcan
             </div>
         </x-slot:footer>
     </x-modal>
