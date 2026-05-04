@@ -114,11 +114,11 @@ final class FacultyProfilesTable extends PowerGridComponent
         return [
             Filter::inputText('full_name')->operators(['contains']),
 
-            Filter::select('academic_rank', 'academic_rank')
+            Filter::multiSelect('academic_rank', 'academic_rank')
                 ->dataSource($this->academicRankFilterOptions())
                 ->optionLabel('name')
                 ->optionValue('id')
-                ->builder(fn (Builder $query, $value) => filled($value) ? $query->where('academic_rank', $value) : $query),
+                ->builder(fn (Builder $query, array $values) => filled($values) ? $query->whereIn('academic_rank', $values) : $query),
 
             Filter::select('college_id', 'college_id')
                 ->dataSource($this->collegeFilterOptions())

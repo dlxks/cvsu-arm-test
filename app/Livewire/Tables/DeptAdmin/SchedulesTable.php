@@ -124,7 +124,11 @@ final class SchedulesTable extends PowerGridComponent
                 ->optionValue('id')
                 ->optionLabel('name'),
 
-            Filter::inputText('semester', 'semester'),
+            Filter::select('semester', 'semester')
+                ->dataSource(collect(Schedule::STATUSES)->map(fn ($s) => ['id' => $s, 'name' => str_replace('_', ' ', ucfirst($s))])->values()->all())
+                ->optionValue('id')
+                ->optionLabel('name'),
+
             Filter::inputText('school_year', 'school_year'),
         ];
     }
@@ -139,7 +143,6 @@ final class SchedulesTable extends PowerGridComponent
                 ->icon('default-pencil-square', ['class' => 'w-4 h-4'])
                 ->class('flex items-center gap-1 text-xs text-blue-600 rounded border border-blue-500 px-2 py-1 hover:bg-blue-50 transition')
                 ->route('schedules.plot', ['schedule' => $row->id]);
-            // ->route('users.show', ['user' => $row->id]);
         }
 
         return $actions;
