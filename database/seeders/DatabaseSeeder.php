@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             ProgramSeeder::class,
             CollegeProgramSeeder::class,
             RoomCategorySeeder::class,
+            ScheduleCategorySeeder::class,
             RoomSeeder::class,
             SubjectSeeder::class,
             SubjectCategorySeeder::class,

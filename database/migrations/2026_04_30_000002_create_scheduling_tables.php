@@ -51,7 +51,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('schedule_id')->constrained('schedules')->cascadeOnDelete()->cascadeOnUpdate();
             $table->foreignId('room_id')->nullable()->constrained()->nullOnDelete()->cascadeOnUpdate();
-            $table->enum('class_type', ['LEC', 'LAB', 'CLINIC', 'OTHERS']);
+            $table->foreignId('schedule_category_id')->constrained('schedule_categories')->cascadeOnUpdate();
             $table->enum('day', ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'])->nullable();
             $table->time('time_in')->nullable();
             $table->time('time_out')->nullable();
@@ -59,19 +59,19 @@ return new class extends Migration
 
             $table->index(['day', 'time_in', 'time_out'], 'schedule_room_time_day_time_index');
             $table->index(['room_id', 'day', 'time_in', 'time_out'], 'schedule_room_time_room_day_time_index');
-            $table->index(['schedule_id', 'class_type', 'day'], 'srt_schedule_class_day_index');
-            $table->index(['day', 'class_type', 'time_in', 'time_out'], 'srt_day_class_time_index');
+            $table->index(['schedule_id', 'schedule_category_id', 'day'], 'srt_schedule_category_day_idx');
+            $table->index(['day', 'schedule_category_id', 'time_in', 'time_out'], 'srt_day_category_time_idx');
         });
 
         Schema::create('schedule_faculty', function (Blueprint $table) {
             $table->id();
             $table->foreignId('schedule_id')->constrained('schedules')->cascadeOnDelete()->cascadeOnUpdate();
             $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete()->cascadeOnUpdate();
-            $table->enum('class_type', ['LEC', 'LAB', 'CLINIC', 'OTHERS']);
+            $table->foreignId('schedule_category_id')->constrained('schedule_categories')->cascadeOnUpdate();
             $table->timestamps();
 
-            $table->unique(['schedule_id', 'class_type'], 'schedule_faculty_sched_class_unique');
-            $table->index(['user_id', 'class_type'], 'schedule_faculty_user_class_index');
+            $table->unique(['schedule_id', 'schedule_category_id'], 'schedule_faculty_sched_category_uq');
+            $table->index(['user_id', 'schedule_category_id'], 'schedule_faculty_user_category_idx');
         });
 
         Schema::create('schedule_service_requests', function (Blueprint $table) {

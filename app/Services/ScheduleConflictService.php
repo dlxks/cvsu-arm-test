@@ -11,7 +11,7 @@ class ScheduleConflictService
         string $day,
         string $timeIn,
         string $timeOut,
-        ?string $classType = null,
+        ?int $scheduleCategoryId = null,
         ?int $ignoreScheduleId = null,
     ): bool {
         $query = DB::table('schedule_room_time as srt')
@@ -23,9 +23,9 @@ class ScheduleConflictService
             ->whereRaw('? < srt.time_out', [$timeIn])
             ->whereRaw('? > srt.time_in', [$timeOut]);
 
-        if ($classType !== null) {
-            $query->where('sf.class_type', $classType)
-                ->whereColumn('sf.class_type', 'srt.class_type');
+        if ($scheduleCategoryId !== null) {
+            $query->where('sf.schedule_category_id', $scheduleCategoryId)
+                ->whereColumn('sf.schedule_category_id', 'srt.schedule_category_id');
         }
 
         if ($ignoreScheduleId !== null) {

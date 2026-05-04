@@ -38,6 +38,10 @@ Route::middleware(['auth'])
             ->middleware('permission:room_categories.view')
             ->name('room-categories.index');
 
+        Route::livewire('/schedule-categories', 'pages::admin.schedule-categories.index')
+            ->middleware('permission:schedule_categories.view')
+            ->name('schedule-categories.index');
+
         // Direct role and permission assignments
         Route::livewire('/assignments', 'pages::admin.assignments.index')
             ->middleware('permission:assignments.manage')

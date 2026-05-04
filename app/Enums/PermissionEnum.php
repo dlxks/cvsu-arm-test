@@ -35,6 +35,11 @@ enum PermissionEnum: string
     case SCHEDULE_DELETE = 'schedules.delete';
     case SCHEDULE_RESTORE = 'schedules.restore';
     case SCHEDULE_ASSIGN = 'schedules.assign';
+    case SCHEDULE_CATEGORY_VIEW = 'schedule_categories.view';
+    case SCHEDULE_CATEGORY_CREATE = 'schedule_categories.create';
+    case SCHEDULE_CATEGORY_UPDATE = 'schedule_categories.update';
+    case SCHEDULE_CATEGORY_DELETE = 'schedule_categories.delete';
+    case SCHEDULE_CATEGORY_RESTORE = 'schedule_categories.restore';
 
     // Faculty Profiles Management
     case FACULTY_PROFILE_CREATE = 'faculty_profiles.create';

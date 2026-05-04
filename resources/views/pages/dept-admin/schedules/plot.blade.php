@@ -3,6 +3,7 @@
 use App\Models\CurriculumEntry;
 use App\Models\Room;
 use App\Models\Schedule;
+use App\Models\ScheduleCategory;
 use App\Models\ScheduleRoomTime;
 use App\Models\User;
 use App\Services\ScheduleConflictService;
@@ -26,7 +27,7 @@ new class extends Component {
 
     // Plot form
     public ?int $plotScheduleId = null;
-    public string $plotClassType = 'LEC';
+    public ?int $plotScheduleCategoryId = null;
     public ?string $plotDay = null;
     public ?string $plotTimeIn = null;
     public ?string $plotTimeOut = null;
@@ -95,9 +96,21 @@ new class extends Component {
     }
 
     #[Computed]
-    public function classTypeOptions(): array
+    public function scheduleCategoryOptions(): array
     {
-        return collect(ScheduleRoomTime::CLASS_TYPES)->map(fn($t) => ['label' => $t, 'value' => $t])->values()->toArray();
+        return ScheduleCategory::query()
+            ->where(function ($query) {
+                $query->where('is_active', true);
+
+                if (filled($this->plotScheduleCategoryId)) {
+                    $query->orWhere('id', $this->plotScheduleCategoryId);
+                }
+            })
+            ->orderBy('name', 'asc')
+            ->get(['id', 'name'])
+            ->map(fn (ScheduleCategory $category) => ['label' => $category->name, 'value' => (int) $category->id])
+            ->values()
+            ->toArray();
     }
 
     #[Computed]
@@ -115,7 +128,7 @@ new class extends Component {
                     ->where('college_id', $this->collegeId)
                     ->when($this->departmentId !== null, fn($q2) => $q2->where('department_id', $this->departmentId));
             })
-            ->orderBy('name')
+            ->orderBy('name', 'asc')
             ->get(['id', 'name'])
             ->map(fn($u) => ['label' => $u->name, 'value' => $u->id])
             ->values()
@@ -127,7 +140,7 @@ new class extends Component {
     {
         return Room::query()
             ->where('campus_id', $this->campusId)
-            ->orderBy('name')
+            ->orderBy('name', 'asc')
             ->get(['id', 'name'])
             ->map(
                 fn($r) => [
@@ -143,7 +156,14 @@ new class extends Component {
     public function plottedSchedules()
     {
         return Schedule::query()
-            ->with(['subject:id,code,title', 'sections:id,schedule_id,computed_section_name', 'roomTimes:id,schedule_id,class_type,day,time_in,time_out', 'facultyAssignments.user:id,name', 'roomTimes.room:id,name'])
+            ->with([
+                'subject:id,code,title',
+                'sections:id,schedule_id,computed_section_name',
+                'roomTimes:id,schedule_id,schedule_category_id,day,time_in,time_out,room_id',
+                'roomTimes.scheduleCategory:id,name',
+                'roomTimes.room:id,name',
+                'facultyAssignments.user:id,name',
+            ])
             ->where('campus_id', $this->campusId)
             ->where('college_id', $this->collegeId)
             ->when($this->departmentId !== null, fn($q) => $q->where('department_id', $this->departmentId))
@@ -173,7 +193,7 @@ new class extends Component {
     {
         $this->checkConflicts();
     }
-    public function updatedPlotClassType(): void
+    public function updatedPlotScheduleCategoryId(): void
     {
         $this->checkConflicts();
     }
@@ -190,7 +210,7 @@ new class extends Component {
         $conflict = app(ScheduleConflictService::class);
 
         if ($this->plotFacultyId) {
-            $this->facultyConflict = $conflict->hasFacultyConflict($this->plotFacultyId, $this->plotDay, $this->plotTimeIn, $this->plotTimeOut, $this->plotClassType, $this->plotScheduleId);
+            $this->facultyConflict = $conflict->hasFacultyConflict($this->plotFacultyId, $this->plotDay, $this->plotTimeIn, $this->plotTimeOut, $this->plotScheduleCategoryId, $this->plotScheduleId);
         }
 
         if ($this->plotRoomId) {
@@ -204,7 +224,7 @@ new class extends Component {
 
         $validated = $this->validate([
             'plotScheduleId' => ['required', 'integer', 'exists:schedules,id'],
-            'plotClassType' => ['required', Rule::in(ScheduleRoomTime::CLASS_TYPES)],
+            'plotScheduleCategoryId' => ['required', 'integer', Rule::exists('schedule_categories', 'id')->where(fn ($query) => $query->where('is_active', true)->orWhere('id', $this->plotScheduleCategoryId))],
             'plotDay' => ['nullable', Rule::in(ScheduleRoomTime::DAYS)],
             'plotTimeIn' => ['nullable', 'date_format:H:i'],
             'plotTimeOut' => ['nullable', 'date_format:H:i', 'after:plotTimeIn'],
@@ -217,7 +237,7 @@ new class extends Component {
                 (int) $validated['plotScheduleId'],
                 array_filter(
                     [
-                        'class_type' => $validated['plotClassType'],
+                        'schedule_category_id' => $validated['plotScheduleCategoryId'],
                         'day' => $validated['plotDay'] ?? null,
                         'time_in' => $validated['plotTimeIn'] ?? null,
                         'time_out' => $validated['plotTimeOut'] ?? null,
@@ -234,7 +254,7 @@ new class extends Component {
             return;
         }
 
-        $this->reset(['plotScheduleId', 'plotFacultyId', 'plotRoomId']);
+        $this->reset(['plotScheduleId', 'plotFacultyId', 'plotRoomId', 'plotScheduleCategoryId']);
         $this->facultyConflict = false;
         $this->roomConflict = false;
         $this->toast()->success('Plotted', 'Schedule has been plotted.')->send();
@@ -280,7 +300,7 @@ new class extends Component {
                         select="label:label|value:value" searchable />
                 </div>
 
-                <x-select.styled label="Class Type" wire:model.live="plotClassType" :options="$this->classTypeOptions"
+                <x-select.styled label="Schedule Category" wire:model.live="plotScheduleCategoryId" :options="$this->scheduleCategoryOptions"
                     select="label:label|value:value" />
                 <x-select.styled label="Day" wire:model.live="plotDay" :options="$this->dayOptions"
                     select="label:label|value:value" />
@@ -324,7 +344,7 @@ new class extends Component {
                                     {{ $schedule->sections->first()?->computed_section_name ?? '—' }}</td>
                                 <td class="px-3 py-2 text-zinc-500 dark:text-zinc-400">
                                     @foreach ($schedule->roomTimes as $rt)
-                                        <div>{{ $rt->class_type }} | {{ $rt->day }}
+                                        <div>{{ $rt->scheduleCategory?->name ?? '—' }} | {{ $rt->day }}
                                             {{ substr($rt->time_in, 0, 5) }}–{{ substr($rt->time_out, 0, 5) }} |
                                             {{ $rt->room?->name ?? '—' }}</div>
                                     @endforeach

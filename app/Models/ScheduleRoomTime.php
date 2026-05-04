@@ -7,14 +7,12 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['schedule_id', 'room_id', 'class_type', 'day', 'time_in', 'time_out'])]
+#[Fillable(['schedule_id', 'room_id', 'schedule_category_id', 'day', 'time_in', 'time_out'])]
 class ScheduleRoomTime extends Model
 {
     use HasFactory;
 
     protected $table = 'schedule_room_time';
-
-    public const CLASS_TYPES = ['LEC', 'LAB', 'CLINIC', 'OTHERS'];
 
     public const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 
@@ -34,5 +32,10 @@ class ScheduleRoomTime extends Model
     public function room(): BelongsTo
     {
         return $this->belongsTo(Room::class);
+    }
+
+    public function scheduleCategory(): BelongsTo
+    {
+        return $this->belongsTo(ScheduleCategory::class);
     }
 }

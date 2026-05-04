@@ -159,7 +159,7 @@
                 @endcanany
 
                 {{-- SUPERADMIN ADMIN LINKS --}}
-                @canany(['campuses.view', 'users.view', 'roles.view', 'permissions.view', 'assignments.manage'])
+                @canany(['campuses.view', 'users.view', 'roles.view', 'permissions.view', 'room_categories.view', 'schedule_categories.view', 'assignments.manage'])
                     {{-- Campuses Links --}}
                     @can('campuses.view')
                         <x-side-bar.item text="Campuses/Colleges" opened>
@@ -168,7 +168,7 @@
                     @endcan
 
                     {{-- User Management Links --}}
-                    @canany(['users.view', 'roles.view', 'permissions.view', 'assignments.manage'])
+                    @canany(['users.view', 'roles.view', 'permissions.view', 'room_categories.view', 'schedule_categories.view', 'assignments.manage'])
                         <x-side-bar.item text="System Management" opened>
                             @can('users.view')
                                 <x-side-bar.item text="User Accounts" icon="users" :current="request()->routeIs('users.index', 'users.*')" :route="route('users.index')" />
@@ -181,6 +181,9 @@
                             @endcan
                             @can('room_categories.view')
                                 <x-side-bar.item text="Room Categories" icon="squares-2x2" :current="request()->routeIs('room-categories.index', 'room-categories.*')" :route="route('room-categories.index')" />
+                            @endcan
+                            @can('schedule_categories.view')
+                                <x-side-bar.item text="Schedule Categories" icon="queue-list" :current="request()->routeIs('schedule-categories.index', 'schedule-categories.*')" :route="route('schedule-categories.index')" />
                             @endcan
                             @can('assignments.manage')
                                 <x-side-bar.item text="Assignments" icon="link" :current="request()->routeIs('assignments.index', 'assignments.*')" :route="route('assignments.index')" />

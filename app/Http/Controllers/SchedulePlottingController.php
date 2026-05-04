@@ -20,7 +20,7 @@ class SchedulePlottingController extends Controller
     public function plot(Request $request, int $scheduleId): JsonResponse
     {
         $validated = $request->validate([
-            'class_type' => ['required', Rule::in(['LEC', 'LAB', 'CLINIC', 'OTHERS'])],
+            'schedule_category_id' => ['required', 'integer', 'exists:schedule_categories,id'],
             'day' => ['required', Rule::in(['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'])],
             'time_in' => ['required', 'date_format:H:i'],
             'time_out' => ['required', 'date_format:H:i', 'after:time_in'],

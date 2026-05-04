@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['schedule_id', 'user_id', 'class_type'])]
+#[Fillable(['schedule_id', 'user_id', 'schedule_category_id'])]
 class ScheduleFaculty extends Model
 {
     use HasFactory;
@@ -22,5 +22,10 @@ class ScheduleFaculty extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function scheduleCategory(): BelongsTo
+    {
+        return $this->belongsTo(ScheduleCategory::class);
     }
 }
