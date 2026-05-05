@@ -169,17 +169,20 @@ new class extends Component {
                     section, excluding NSTP1 and NSTP2 subjects.</p>
             </div>
 
-            <!-- Apply the dynamic key to the wrapper -->
             <div class="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
 
                 <x-select.styled label="Program" wire:model.live="form.program_id" :options="$this->programOptions"
                     select="label:label|value:value" searchable />
 
-                <x-select.styled label="Year Level" wire:model.live="form.year_level" :options="$this->yearLevelOptions"
-                    select="label:label|value:value" :disabled="empty($this->form->program_id)" />
+                <div wire:key="wrapper-year-{{ $form->program_id ?? 'none' }}">
+                    <x-select.styled label="Year Level" wire:model.live="form.year_level" :options="$this->yearLevelOptions"
+                        select="label:label|value:value" :disabled="empty($this->form->program_id)" invalidate />
+                </div>
 
-                <x-select.styled label="Semester" wire:model="form.semester" :options="$this->semesterOptions"
-                    select="label:label|value:value" :disabled="empty($this->form->year_level)" />
+                <div wire:key="wrapper-semester-{{ $form->year_level ?? 'none' }}">
+                    <x-select.styled label="Semester" wire:model="form.semester" :options="$this->semesterOptions"
+                        select="label:label|value:value" :disabled="empty($this->form->year_level)" />
+                </div>
 
                 <x-input label="School Year (YYYY-YYYY)" wire:model="form.school_year" />
 
@@ -193,7 +196,7 @@ new class extends Component {
 
             </div>
 
-            <div class="flex justify-end">
+            <div class="flex justify-end relative z-20">
                 <x-button color="primary" icon="inbox-arrow-down" text="Generate Schedules" sm wire:click="generate" />
             </div>
         </div>
