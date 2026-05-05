@@ -18,7 +18,7 @@ class BulkGenerateScheduleForm extends Form
 
     public ?int $year_level = null;
 
-    public string $semester = '1ST';
+    public ?string $semester = '1ST';
 
     public string $school_year = '';
 
@@ -47,6 +47,7 @@ class BulkGenerateScheduleForm extends Form
     {
         $this->program_id = null;
         $this->year_level = null;
+        $this->semester = null;
         $this->section_count = 1;
         if (! $this->canModifySlots()) {
             $this->slots = 40;
@@ -73,7 +74,7 @@ class BulkGenerateScheduleForm extends Form
                 'integer',
                 ValidationRule::in($this->availableYearLevels()),
             ],
-            'semester' => ['required', Rule::in(array_keys(CurriculumEntry::SEMESTERS))],
+            'semester' => ['required', Rule::in($this->availableSemesters())],
             'school_year' => ['required', 'regex:/^\d{4}-\d{4}$/'],
             'section_count' => ['required', 'integer', 'min:1', 'max:30'],
             'slots' => $this->canModifySlots()
@@ -107,6 +108,35 @@ class BulkGenerateScheduleForm extends Form
             ->sort()
             ->values()
             ->all();
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public function availableSemesters(): array
+    {
+        if ($this->program_id === null || $this->year_level === null) {
+            return [];
+        }
+
+        $availableSemesters = CurriculumEntry::query()
+            ->whereHas('curriculum', fn ($query) => $query->where('program_id', $this->program_id))
+            ->where('year_level', $this->year_level)
+            ->whereNotNull('semester')
+            ->distinct()
+            ->pluck('semester');
+
+        return collect(array_keys(CurriculumEntry::SEMESTERS))
+            ->intersect($availableSemesters)
+            ->values()
+            ->all();
+    }
+
+    public function syncSemesterSelection(): void
+    {
+        if (! in_array($this->semester, $this->availableSemesters(), true)) {
+            $this->semester = null;
+        }
     }
 
     private function canModifySlots(): bool

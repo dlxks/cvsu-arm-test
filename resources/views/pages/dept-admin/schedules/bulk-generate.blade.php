@@ -11,8 +11,7 @@ use Livewire\Attributes\Computed;
 use Livewire\Component;
 use TallStackUi\Traits\Interactions;
 
-new class extends Component
-{
+new class extends Component {
     use CanManage, Interactions;
 
     public BulkGenerateScheduleForm $form;
@@ -54,17 +53,17 @@ new class extends Component
         $this->departmentName = $profile->department?->name ?? 'College-wide';
 
         $year = (int) now()->format('Y');
-        $this->form->resetForm($year.'-'.($year + 1));
+        $this->form->resetForm($year . '-' . ($year + 1));
     }
 
     #[Computed]
     public function programOptions(): array
     {
         return Program::query()
-            ->whereHas('colleges', fn ($q) => $q->where('colleges.id', $this->collegeId))
+            ->whereHas('colleges', fn($q) => $q->where('colleges.id', $this->collegeId))
             ->orderBy('code')
             ->get(['id', 'code', 'title'])
-            ->map(fn ($p) => ['label' => $p->code.' – '.$p->title, 'value' => $p->id])
+            ->map(fn($p) => ['label' => $p->code . ' – ' . $p->title, 'value' => $p->id])
             ->values()
             ->toArray();
     }
@@ -72,8 +71,13 @@ new class extends Component
     #[Computed]
     public function semesterOptions(): array
     {
-        return collect(CurriculumEntry::SEMESTERS)
-            ->map(fn ($label, $value) => ['label' => $label, 'value' => $value])
+        return collect($this->form->availableSemesters())
+            ->map(
+                fn(string $semester) => [
+                    'label' => CurriculumEntry::semesterLabel($semester),
+                    'value' => $semester,
+                ],
+            )
             ->values()
             ->toArray();
     }
@@ -82,7 +86,7 @@ new class extends Component
     public function yearLevelOptions(): array
     {
         return collect($this->form->availableYearLevels())
-            ->map(fn ($yearLevel) => ['label' => 'Year '.$yearLevel, 'value' => $yearLevel])
+            ->map(fn($yearLevel) => ['label' => 'Year ' . $yearLevel, 'value' => $yearLevel])
             ->values()
             ->toArray();
     }
@@ -94,7 +98,7 @@ new class extends Component
             ->with(['subject:id,code,title', 'sections:id,schedule_id,computed_section_name'])
             ->where('campus_id', $this->campusId)
             ->where('college_id', $this->collegeId)
-            ->when($this->departmentId !== null, fn ($q) => $q->where('department_id', $this->departmentId))
+            ->when($this->departmentId !== null, fn($q) => $q->where('department_id', $this->departmentId))
             ->where('status', 'draft')
             ->latest()
             ->limit(20)
@@ -104,7 +108,12 @@ new class extends Component
     public function updatedFormProgramId(): void
     {
         $this->form->year_level = null;
-        unset($this->yearLevelOptions);
+        $this->form->semester = null;
+    }
+
+    public function updatedFormYearLevel(): void
+    {
+        $this->form->syncSemesterSelection();
     }
 
     public function generate(): void
@@ -132,7 +141,7 @@ new class extends Component
 
         $this->form->resetAfterSubmit();
         $this->toast()
-            ->success('Generated', $generated->count().' schedule(s) created.')
+            ->success('Generated', $generated->count() . ' schedule(s) created.')
             ->send();
     }
 };
@@ -160,20 +169,28 @@ new class extends Component
                     section, excluding NSTP1 and NSTP2 subjects.</p>
             </div>
 
+            <!-- Apply the dynamic key to the wrapper -->
             <div class="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+
                 <x-select.styled label="Program" wire:model.live="form.program_id" :options="$this->programOptions"
                     select="label:label|value:value" searchable />
+
                 <x-select.styled label="Year Level" wire:model.live="form.year_level" :options="$this->yearLevelOptions"
-                    select="label:label|value:value" />
+                    select="label:label|value:value" :disabled="empty($this->form->program_id)" />
+
                 <x-select.styled label="Semester" wire:model="form.semester" :options="$this->semesterOptions"
-                    select="label:label|value:value" />
+                    select="label:label|value:value" :disabled="empty($this->form->year_level)" />
+
                 <x-input label="School Year (YYYY-YYYY)" wire:model="form.school_year" />
+
                 <x-input label="Number of Sections" type="number" wire:model="form.section_count" min="1"
                     max="30" />
+
                 @if ($this->canModifySlots())
                     <x-input label="Number of Slots" type="number" wire:model="form.slots" min="1"
                         max="500" />
                 @endif
+
             </div>
 
             <div class="flex justify-end">
