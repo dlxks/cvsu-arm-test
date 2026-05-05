@@ -72,7 +72,10 @@ new class extends Component
     #[Computed]
     public function semesterOptions(): array
     {
-        return collect(CurriculumEntry::SEMESTERS)->map(fn ($label, $value) => ['label' => $label, 'value' => $value])->values()->toArray();
+        return collect($this->form->availableSemesters())
+            ->map(fn ($semester) => ['label' => CurriculumEntry::SEMESTERS[$semester] ?? $semester, 'value' => $semester])
+            ->values()
+            ->toArray();
     }
 
     #[Computed]
@@ -101,7 +104,15 @@ new class extends Component
     public function updatedFormProgramId(): void
     {
         $this->form->year_level = null;
+        $this->form->semester = null;
         unset($this->yearLevelOptions);
+        unset($this->semesterOptions);
+    }
+
+    public function updatedFormYearLevel(): void
+    {
+        $this->form->semester = null;
+        unset($this->semesterOptions);
     }
 
     public function generate(): void
@@ -162,7 +173,7 @@ new class extends Component
                     select="label:label|value:value" searchable />
                 <x-select.styled label="Year Level" wire:model.live="form.year_level" :options="$this->yearLevelOptions"
                     select="label:label|value:value" />
-                <x-select.styled label="Semester" wire:model="form.semester" :options="$this->semesterOptions"
+                <x-select.styled label="Semester" wire:model.live="form.semester" :options="$this->semesterOptions"
                     select="label:label|value:value" />
                 <x-input label="School Year (YYYY-YYYY)" wire:model="form.school_year" />
                 <x-input label="Number of Sections" type="number" wire:model="form.section_count" min="1"
