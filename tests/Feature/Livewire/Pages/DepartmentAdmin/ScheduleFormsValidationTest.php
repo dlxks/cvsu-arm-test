@@ -1,9 +1,9 @@
 <?php
 
-use App\Models\Campus;
-use App\Models\College;
 use App\Models\Curriculum;
 use App\Models\CurriculumEntry;
+use App\Models\Campus;
+use App\Models\College;
 use App\Models\Department;
 use App\Models\EmployeeProfile;
 use App\Models\Program;
@@ -132,77 +132,6 @@ describe('department admin schedule forms', function () {
 
         expect($component->instance()->yearLevelOptions())->toBe([
             ['label' => 'Year 3', 'value' => 3],
-        ]);
-    });
-
-    it('derives semester options from curriculum entries and filters them by selected year level', function () {
-        $user = actingUserWithPermissions([
-            'schedules.create',
-            'schedules.assign',
-        ], ['deptAdmin']);
-
-        $campus = Campus::factory()->create();
-        $college = College::factory()->forCampus($campus)->create();
-        $department = Department::factory()->forCollege($college)->create();
-
-        EmployeeProfile::factory()->forDepartment($department)->create([
-            'user_id' => $user->id,
-        ]);
-
-        $subjectCategory = SubjectCategory::factory()->create();
-        $program = Program::factory()->create(['code' => 'BSIT']);
-        $program->colleges()->attach($college->id);
-
-        $curriculum = Curriculum::factory()->create([
-            'program_id' => $program->id,
-            'year_implemented' => 2026,
-        ]);
-
-        $subjectA = Subject::factory()->create(['code' => 'IT201']);
-        $subjectB = Subject::factory()->create(['code' => 'IT202']);
-        $subjectC = Subject::factory()->create(['code' => 'IT301']);
-
-        CurriculumEntry::factory()->create([
-            'curriculum_id' => $curriculum->id,
-            'subject_id' => $subjectA->id,
-            'subject_category_id' => $subjectCategory->id,
-            'year_level' => 2,
-            'semester' => '1ST',
-        ]);
-
-        CurriculumEntry::factory()->create([
-            'curriculum_id' => $curriculum->id,
-            'subject_id' => $subjectB->id,
-            'subject_category_id' => $subjectCategory->id,
-            'year_level' => 2,
-            'semester' => '2ND',
-        ]);
-
-        CurriculumEntry::factory()->create([
-            'curriculum_id' => $curriculum->id,
-            'subject_id' => $subjectC->id,
-            'subject_category_id' => $subjectCategory->id,
-            'year_level' => 3,
-            'semester' => 'SUMMER',
-        ]);
-
-        $component = Livewire::actingAs($user)
-            ->test('pages::dept-admin.schedules.bulk-generate')
-            ->set('form.program_id', $program->id)
-            ->set('form.year_level', 2);
-
-        expect($component->instance()->semesterOptions())->toBe([
-            ['label' => '1st Semester', 'value' => '1ST'],
-            ['label' => '2nd Semester', 'value' => '2ND'],
-        ]);
-
-        $component
-            ->set('form.semester', '2ND')
-            ->set('form.year_level', 3)
-            ->assertSet('form.semester', null);
-
-        expect($component->instance()->semesterOptions())->toBe([
-            ['label' => 'Summer', 'value' => 'SUMMER'],
         ]);
     });
 

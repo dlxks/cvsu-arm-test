@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Livewire\Forms\DeptAdmin;
 
 use App\Enums\PermissionEnum;
+use App\Models\Curriculum;
 use App\Models\CurriculumEntry;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
@@ -17,7 +18,7 @@ class BulkGenerateScheduleForm extends Form
 
     public ?int $year_level = null;
 
-    public ?string $semester = '1ST';
+    public string $semester = '1ST';
 
     public string $school_year = '';
 
@@ -72,7 +73,7 @@ class BulkGenerateScheduleForm extends Form
                 'integer',
                 ValidationRule::in($this->availableYearLevels()),
             ],
-            'semester' => ['required', Rule::in($this->availableSemesters())],
+            'semester' => ['required', Rule::in(array_keys(CurriculumEntry::SEMESTERS))],
             'school_year' => ['required', 'regex:/^\d{4}-\d{4}$/'],
             'section_count' => ['required', 'integer', 'min:1', 'max:30'],
             'slots' => $this->canModifySlots()
@@ -90,41 +91,14 @@ class BulkGenerateScheduleForm extends Form
             return [];
         }
 
-        return CurriculumEntry::query()
-            ->whereHas('curriculum', fn ($query) => $query->where('program_id', $this->program_id))
-            ->whereNotNull('year_level')
+        return Curriculum::query()
+            ->where('program_id', $this->program_id)
+            ->join('curriculum_entries', 'curricula.id', '=', 'curriculum_entries.curriculum_id')
+            ->whereNotNull('curriculum_entries.year_level')
             ->distinct()
-            ->orderBy('year_level')
-            ->pluck('year_level')
+            ->orderBy('curriculum_entries.year_level')
+            ->pluck('curriculum_entries.year_level')
             ->map(static fn (mixed $yearLevel): int => (int) $yearLevel)
-            ->values()
-            ->all();
-    }
-
-    /**
-     * @return array<int, string>
-     */
-    public function availableSemesters(): array
-    {
-        if ($this->program_id === null || $this->year_level === null) {
-            return [];
-        }
-
-        $available = CurriculumEntry::query()
-            ->whereHas('curriculum', fn ($query) => $query->where('program_id', $this->program_id))
-            ->where('year_level', $this->year_level)
-            ->whereNotNull('semester')
-            ->distinct()
-            ->pluck('semester')
-            ->map(static fn (mixed $semester): string => (string) $semester)
-            ->filter(static fn (string $semester): bool => $semester !== '')
-            ->values()
-            ->all();
-
-        $orderedSemesters = array_keys(CurriculumEntry::SEMESTERS);
-
-        return collect($orderedSemesters)
-            ->filter(static fn (string $semester): bool => in_array($semester, $available, true))
             ->values()
             ->all();
     }
