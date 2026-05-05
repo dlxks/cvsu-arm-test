@@ -1,13 +1,18 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Livewire\Forms\Admin;
 
+use App\Livewire\Forms\Concerns\NormalizesFormData;
 use App\Models\Program;
 use Illuminate\Validation\Rule;
 use Livewire\Form;
 
 class ProgramForm extends Form
 {
+    use NormalizesFormData;
+
     public ?Program $program = null;
 
     public string $code = '';
@@ -59,9 +64,9 @@ class ProgramForm extends Form
     public function payload(array $validated): array
     {
         return [
-            'code' => trim($validated['code']),
-            'title' => trim($validated['title']),
-            'description' => filled($validated['description']) ? trim($validated['description']) : null,
+            'code' => $this->trimmedString($validated['code']),
+            'title' => $this->trimmedString($validated['title']),
+            'description' => $this->nullableTrimmedString($validated['description']),
             'no_of_years' => (int) $validated['no_of_years'],
             'level' => $validated['level'],
             'is_active' => (bool) $validated['is_active'],

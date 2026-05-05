@@ -49,17 +49,16 @@ class PlotScheduleForm extends Form
      */
     public function payload(array $validated): array
     {
-        return array_filter(
-            [
+        return collect([
                 'schedule_category_id' => $validated['schedule_category_id'] ?? null,
                 'day' => $validated['day'] ?? null,
                 'time_in' => $validated['time_in'] ?? null,
                 'time_out' => $validated['time_out'] ?? null,
                 'user_id' => $validated['faculty_id'] ?? null,
                 'room_id' => $validated['room_id'] ?? null,
-            ],
-            static fn (mixed $value): bool => $value !== null,
-        );
+            ])
+            ->filter(static fn (mixed $value): bool => $value !== null)
+            ->all();
     }
 
     /**

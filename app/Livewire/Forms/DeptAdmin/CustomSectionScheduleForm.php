@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Livewire\Forms\DeptAdmin;
 
+use App\Livewire\Forms\Concerns\NormalizesFormData;
 use App\Models\CurriculumEntry;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -11,6 +12,8 @@ use Livewire\Form;
 
 class CustomSectionScheduleForm extends Form
 {
+    use NormalizesFormData;
+
     public ?int $subject_id = null;
 
     public string $program_code = '';
@@ -65,8 +68,8 @@ class CustomSectionScheduleForm extends Form
     {
         $validated = $this->validate($this->rules());
 
-        $validated['program_code'] = Str::upper(trim((string) $validated['program_code']));
-        $validated['section_identifier'] = Str::upper(trim((string) $validated['section_identifier']));
+        $validated['program_code'] = Str::upper($this->trimmedString($validated['program_code']));
+        $validated['section_identifier'] = Str::upper($this->trimmedString($validated['section_identifier']));
 
         if (($validated['section_type'] ?? null) !== 'NSTP') {
             $validated['nstp_track'] = null;

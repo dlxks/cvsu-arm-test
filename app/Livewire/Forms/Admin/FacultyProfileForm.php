@@ -1,13 +1,18 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Livewire\Forms\Admin;
 
+use App\Livewire\Forms\Concerns\NormalizesFormData;
 use App\Models\Department;
 use Illuminate\Validation\Rule;
 use Livewire\Form;
 
 class FacultyProfileForm extends Form
 {
+    use NormalizesFormData;
+
     public string $first_name = '';
 
     public string $middle_name = '';
@@ -68,7 +73,10 @@ class FacultyProfileForm extends Form
 
     public function fullName(): string
     {
-        return trim($this->first_name.' '.($this->middle_name ? $this->middle_name.' ' : '').$this->last_name);
+        return collect([$this->first_name, $this->middle_name, $this->last_name])
+            ->map(fn (?string $value): string => $this->trimmedString($value))
+            ->filter()
+            ->implode(' ');
     }
 
     public function resetForm(): void

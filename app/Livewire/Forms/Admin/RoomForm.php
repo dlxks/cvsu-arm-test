@@ -1,8 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Livewire\Forms\Admin;
 
 use App\Enums\RoomStatusEnum;
+use App\Livewire\Forms\Concerns\NormalizesFormData;
 use App\Models\Room;
 use App\Models\RoomCategory;
 use Illuminate\Validation\Rule;
@@ -11,6 +14,8 @@ use LogicException;
 
 class RoomForm extends Form
 {
+    use NormalizesFormData;
+
     public ?Room $room = null;
 
     public ?int $campus_id = null;
@@ -112,12 +117,12 @@ class RoomForm extends Form
             'campus_id' => (int) $validated['campus_id'],
             'college_id' => (int) $validated['college_id'],
             'department_id' => filled($validated['department_id'] ?? null) ? (int) $validated['department_id'] : null,
-            'name' => trim($validated['name']),
-            'floor_no' => filled($validated['floor_no'] ?? null) ? trim($validated['floor_no']) : null,
+            'name' => $this->trimmedString($validated['name']),
+            'floor_no' => $this->nullableTrimmedString($validated['floor_no'] ?? null),
             'room_no' => filled($validated['room_no'] ?? null) ? (int) $validated['room_no'] : null,
             'room_category_id' => (int) $validated['room_category_id'],
-            'description' => filled($validated['description']) ? trim($validated['description']) : null,
-            'location' => filled($validated['location']) ? trim($validated['location']) : null,
+            'description' => $this->nullableTrimmedString($validated['description']),
+            'location' => $this->nullableTrimmedString($validated['location']),
             'is_active' => (bool) $validated['is_active'],
             'status' => Room::toDatabaseStatusValue($validated['status'] ?? null),
         ];

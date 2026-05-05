@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -9,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 
 #[Fillable(['sched_code', 'subject_id', 'campus_id', 'college_id', 'department_id', 'semester', 'school_year', 'slots', 'status'])]
 class Schedule extends Model
@@ -22,6 +25,25 @@ class Schedule extends Model
         'plotted',
         'published',
     ];
+
+    public static function statusLabel(?string $status): string
+    {
+        return filled($status) ? Str::headline((string) $status) : '-';
+    }
+
+    public static function statusFilterOptions(?iterable $statuses = null): array
+    {
+        return collect($statuses ?? self::STATUSES)
+            ->filter(fn (mixed $status): bool => filled($status))
+            ->map(fn (mixed $status): string => (string) $status)
+            ->unique()
+            ->values()
+            ->map(fn (string $status): array => [
+                'id' => $status,
+                'name' => self::statusLabel($status),
+            ])
+            ->all();
+    }
 
     public function subject(): BelongsTo
     {

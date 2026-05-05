@@ -1,10 +1,12 @@
 <?php
 
+use App\Models\CurriculumEntry;
 use App\Models\Permission;
 use App\Models\Program;
 use App\Models\Role;
 use App\Models\Room;
 use App\Models\RoomCategory;
+use App\Models\Schedule;
 use App\Models\Subject;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -35,6 +37,37 @@ describe('Program model', function () {
 
         expect($program->level_label)->toBe('Undergraduate')
             ->and($program->duration_label)->toBe('4 years');
+    });
+
+    it('builds normalized level select options from raw stored values', function () {
+        expect(Program::levelOptions(['GRADUATE', 'UNDERGRADUATE', 'GRADUATE']))->toBe([
+            ['id' => 'GRADUATE', 'name' => 'Graduate'],
+            ['id' => 'UNDERGRADUATE', 'name' => 'Undergraduate'],
+        ]);
+    });
+});
+
+describe('CurriculumEntry model', function () {
+    it('builds semester labels and option arrays from curriculum values', function () {
+        expect(CurriculumEntry::semesterLabel('1ST'))->toBe('1st Semester')
+            ->and(CurriculumEntry::semesterFilterOptions(['2ND', 'SUMMER']))->toBe([
+                ['id' => '2ND', 'name' => '2nd Semester'],
+                ['id' => 'SUMMER', 'name' => 'Summer'],
+            ])
+            ->and(CurriculumEntry::semesterSelectOptions(['2ND', 'SUMMER']))->toBe([
+                ['label' => '2nd Semester', 'value' => '2ND'],
+                ['label' => 'Summer', 'value' => 'SUMMER'],
+            ]);
+    });
+});
+
+describe('Schedule model', function () {
+    it('builds human readable status labels and filter options', function () {
+        expect(Schedule::statusLabel('pending_plotting'))->toBe('Pending Plotting')
+            ->and(Schedule::statusFilterOptions(['draft', 'published']))->toBe([
+                ['id' => 'draft', 'name' => 'Draft'],
+                ['id' => 'published', 'name' => 'Published'],
+            ]);
     });
 });
 
@@ -74,6 +107,13 @@ describe('Room model', function () {
 
         expect($room->type_label)->toBe('Auditorium')
             ->and($room->display_name)->toBe('Main Auditorium');
+    });
+
+    it('exposes reusable room status filter options', function () {
+        expect(Room::statusFilterOptions(['useable', 'under_renovation']))->toBe([
+            ['id' => 'useable', 'name' => 'Useable'],
+            ['id' => 'under_renovation', 'name' => 'Under Renovation'],
+        ]);
     });
 });
 

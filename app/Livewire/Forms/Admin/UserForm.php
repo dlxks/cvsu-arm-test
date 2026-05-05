@@ -1,7 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Livewire\Forms\Admin;
 
+use App\Livewire\Forms\Concerns\NormalizesFormData;
 use App\Models\Department;
 use App\Models\Permission;
 use App\Models\User;
@@ -11,6 +14,8 @@ use Livewire\Form;
 
 class UserForm extends Form
 {
+    use NormalizesFormData;
+
     public ?User $user = null;
 
     public string $first_name = '';
@@ -225,7 +230,7 @@ class UserForm extends Form
     public function fullName(): string
     {
         return collect([$this->first_name, $this->middle_name, $this->last_name])
-            ->map(fn (?string $value): string => trim((string) $value))
+            ->map(fn (?string $value): string => $this->trimmedString($value))
             ->filter()
             ->implode(' ');
     }
@@ -233,7 +238,7 @@ class UserForm extends Form
     public function normalizedRoles(): array
     {
         $roles = collect($this->roles)
-            ->map(fn ($role): string => trim((string) $role))
+            ->map(fn ($role): string => $this->trimmedString($role))
             ->filter()
             ->unique()
             ->values();
@@ -313,7 +318,7 @@ class UserForm extends Form
 
     protected function splitDisplayName(string $name): array
     {
-        $parts = preg_split('/\s+/', trim($name)) ?: [];
+        $parts = preg_split('/\s+/', $this->trimmedString($name)) ?: [];
         $firstName = array_shift($parts) ?? '';
         $lastName = count($parts) ? (string) array_pop($parts) : '';
 
@@ -326,8 +331,6 @@ class UserForm extends Form
 
     protected function blankToNull(?string $value): ?string
     {
-        $value = trim((string) $value);
-
-        return $value === '' ? null : $value;
+        return $this->nullableTrimmedString($value);
     }
 }

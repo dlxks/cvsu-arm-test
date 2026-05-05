@@ -1,9 +1,9 @@
 <?php
 
-use App\Models\Curriculum;
-use App\Models\CurriculumEntry;
 use App\Models\Campus;
 use App\Models\College;
+use App\Models\Curriculum;
+use App\Models\CurriculumEntry;
 use App\Models\Department;
 use App\Models\EmployeeProfile;
 use App\Models\Program;

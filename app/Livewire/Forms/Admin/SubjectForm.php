@@ -1,12 +1,17 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Livewire\Forms\Admin;
 
+use App\Livewire\Forms\Concerns\NormalizesFormData;
 use App\Models\Subject;
 use Livewire\Form;
 
 class SubjectForm extends Form
 {
+    use NormalizesFormData;
+
     public ?Subject $subject = null;
 
     public string $code = '';
@@ -63,9 +68,9 @@ class SubjectForm extends Form
     public function payload(array $validated): array
     {
         return [
-            'code' => trim($validated['code']),
-            'title' => trim($validated['title']),
-            'description' => filled($validated['description']) ? trim($validated['description']) : null,
+            'code' => $this->trimmedString($validated['code']),
+            'title' => $this->trimmedString($validated['title']),
+            'description' => $this->nullableTrimmedString($validated['description']),
             'lecture_units' => (int) $validated['lecture_units'],
             'laboratory_units' => (int) $validated['laboratory_units'],
             'is_credit' => (bool) $validated['is_credit'],

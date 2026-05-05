@@ -93,18 +93,24 @@ class BulkGenerateScheduleForm extends Form
 
         return Curriculum::query()
             ->where('program_id', $this->program_id)
-            ->join('curriculum_entries', 'curricula.id', '=', 'curriculum_entries.curriculum_id')
-            ->whereNotNull('curriculum_entries.year_level')
-            ->distinct()
-            ->orderBy('curriculum_entries.year_level')
-            ->pluck('curriculum_entries.year_level')
+            ->with([
+                'entries' => fn ($query) => $query
+                    ->select('curriculum_id', 'year_level')
+                    ->whereNotNull('year_level'),
+            ])
+            ->get()
+            ->pluck('entries')
+            ->flatten(1)
+            ->pluck('year_level')
             ->map(static fn (mixed $yearLevel): int => (int) $yearLevel)
+            ->unique()
+            ->sort()
             ->values()
             ->all();
     }
 
     private function canModifySlots(): bool
     {
-        return Auth::user()?->can(PermissionEnum::SCHEDULE_SLOT_MODIFY->value) ?? false;
+        return Auth::guard()->user()?->can(PermissionEnum::SCHEDULE_SLOT_MODIFY->value) ?? false;
     }
 }

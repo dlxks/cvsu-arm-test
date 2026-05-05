@@ -1,7 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Livewire\Tables\DeptAdmin;
 
+use App\Models\CurriculumEntry;
 use App\Models\Schedule;
 use App\Traits\CanManage;
 use Illuminate\Database\Eloquent\Builder;
@@ -79,6 +82,7 @@ final class SchedulesTable extends PowerGridComponent
             ->add('section_label', fn (Schedule $s) => $s->sections->first()?->computed_section_name ?? '—')
             ->add('section_type_label', fn (Schedule $s) => $s->sections->first()?->section_type ?? '—')
             ->add('semester')
+            ->add('semester_label', fn (Schedule $s) => CurriculumEntry::semesterLabel($s->semester))
             ->add('school_year')
             ->add('slots')
             ->add('status_badge', fn (Schedule $s) => $this->statusBadge($s->status));
@@ -98,7 +102,7 @@ final class SchedulesTable extends PowerGridComponent
 
             Column::make('Type', 'section_type_label'),
 
-            Column::make('Semester', 'semester')
+            Column::make('Semester', 'semester_label', 'semester')
                 ->sortable()
                 ->searchable(),
 
@@ -120,12 +124,12 @@ final class SchedulesTable extends PowerGridComponent
     {
         return [
             Filter::select('status', 'status')
-                ->dataSource(collect(Schedule::STATUSES)->map(fn ($s) => ['id' => $s, 'name' => str_replace('_', ' ', ucfirst($s))])->values()->all())
+                ->dataSource(Schedule::statusFilterOptions())
                 ->optionValue('id')
                 ->optionLabel('name'),
 
             Filter::select('semester', 'semester')
-                ->dataSource(collect(Schedule::STATUSES)->map(fn ($s) => ['id' => $s, 'name' => str_replace('_', ' ', ucfirst($s))])->values()->all())
+                ->dataSource(CurriculumEntry::semesterFilterOptions())
                 ->optionValue('id')
                 ->optionLabel('name'),
 
@@ -159,7 +163,7 @@ final class SchedulesTable extends PowerGridComponent
             default => 'text-zinc-500 bg-zinc-100 border-zinc-300',
         };
 
-        $label = str_replace('_', ' ', ucwords($status, '_'));
+        $label = Schedule::statusLabel($status);
 
         return "<span class=\"inline-flex rounded-full border px-2 py-0.5 text-xs font-medium {$color}\">{$label}</span>";
     }

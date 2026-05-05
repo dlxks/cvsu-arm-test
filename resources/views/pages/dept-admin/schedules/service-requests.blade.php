@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Models\ScheduleServiceRequest;
 use App\Services\ScheduleWorkflowService;
 use App\Traits\CanManage;
+use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 use TallStackUi\Traits\Interactions;
@@ -150,7 +151,7 @@ new class extends Component {
                                                 'plotted' => 'emerald',
                                                 'pending_plotting' => 'amber',
                                                 default => 'zinc',
-                                            }" :text="str_replace('_', ' ', $schedule->status)" />
+                                            }" :text="Str::of($schedule->status)->replace('_', ' ')->headline()" />
                                         </td>
                                         @if ($sr->status === 'assigned_to_dept' && $departmentId !== null && (int) $sr->assigned_department_id === $departmentId)
                                             <td class="px-3 py-2">

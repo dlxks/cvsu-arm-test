@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
 use Database\Factories\ProgramFactory;
@@ -24,6 +26,20 @@ class Program extends Model
         'PRE-BACCALAUREATE' => 'Pre-Baccalaureate',
         'POST-BACCALAUREATE' => 'Post-Baccalaureate',
     ];
+
+    public static function levelOptions(?iterable $levels = null): array
+    {
+        return collect($levels ?? array_keys(self::LEVELS))
+            ->filter(fn (mixed $level): bool => filled($level))
+            ->map(fn (mixed $level): string => (string) $level)
+            ->unique()
+            ->values()
+            ->map(fn (string $level): array => [
+                'id' => $level,
+                'name' => self::LEVELS[$level] ?? $level,
+            ])
+            ->all();
+    }
 
     protected function isActive(): Attribute
     {

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Livewire\Tables\Admin;
 
 use App\Models\Program;
@@ -134,18 +136,15 @@ final class ProgramsTable extends PowerGridComponent
 
     protected function levelFilterOptions(): array
     {
-        return $this->baseProgramQuery()
+        $levels = $this->baseProgramQuery()
             ->whereNotNull('level')
             ->where('level', '!=', '')
             ->distinct()
             ->orderBy('level')
             ->pluck('level')
-            ->map(fn (string $level) => [
-                'id' => $level,
-                'name' => Program::LEVELS[$level] ?? $level,
-            ])
-            ->values()
             ->all();
+
+        return Program::levelOptions($levels);
     }
 
     protected function availabilityFilterOptions(): array

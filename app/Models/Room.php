@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
 use App\Enums\RoomStatusEnum;
@@ -25,6 +27,20 @@ class Room extends Model
         RoomStatusEnum::UNDER_CONSTRUCTION->value => 'Under Construction',
         RoomStatusEnum::UNDER_RENOVATION->value => 'Under Renovation',
     ];
+
+    public static function statusFilterOptions(?iterable $statuses = null): array
+    {
+        return collect($statuses ?? array_keys(self::STATUSES))
+            ->filter(fn (mixed $status): bool => filled($status))
+            ->map(fn (mixed $status): string => (string) $status)
+            ->unique()
+            ->values()
+            ->map(fn (string $status): array => [
+                'id' => $status,
+                'name' => self::STATUSES[$status] ?? Str::headline($status),
+            ])
+            ->all();
+    }
 
     protected function isActive(): Attribute
     {

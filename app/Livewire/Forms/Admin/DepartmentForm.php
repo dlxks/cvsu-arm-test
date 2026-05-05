@@ -1,13 +1,18 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Livewire\Forms\Admin;
 
+use App\Livewire\Forms\Concerns\NormalizesFormData;
 use App\Models\Department;
 use Livewire\Form;
 use LogicException;
 
 class DepartmentForm extends Form
 {
+    use NormalizesFormData;
+
     public ?Department $department = null;
 
     public ?int $campus_id = null;
@@ -69,9 +74,9 @@ class DepartmentForm extends Form
         return [
             'campus_id' => (int) $validated['campus_id'],
             'college_id' => (int) $validated['college_id'],
-            'code' => trim($validated['code']),
-            'name' => trim($validated['name']),
-            'description' => filled($validated['description']) ? trim($validated['description']) : null,
+            'code' => $this->trimmedString($validated['code']),
+            'name' => $this->trimmedString($validated['name']),
+            'description' => $this->nullableTrimmedString($validated['description']),
             'is_active' => (bool) $validated['is_active'],
         ];
     }

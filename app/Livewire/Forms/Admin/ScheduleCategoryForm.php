@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Livewire\Forms\Admin;
 
+use App\Livewire\Forms\Concerns\NormalizesFormData;
 use App\Models\ScheduleCategory;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -11,6 +12,8 @@ use Livewire\Form;
 
 class ScheduleCategoryForm extends Form
 {
+    use NormalizesFormData;
+
     public ?ScheduleCategory $scheduleCategory = null;
 
     public string $name = '';
@@ -36,8 +39,8 @@ class ScheduleCategoryForm extends Form
     public function validateForm(): array
     {
         $validated = $this->validate($this->rules());
-        $validated['name'] = Str::upper(trim($validated['name']));
-        $validated['slug'] = Str::slug($validated['slug']);
+        $validated['name'] = Str::upper($this->trimmedString($validated['name']));
+        $validated['slug'] = Str::slug($this->trimmedString($validated['slug']));
 
         return $validated;
     }

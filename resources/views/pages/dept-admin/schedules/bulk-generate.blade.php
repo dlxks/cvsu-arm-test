@@ -31,7 +31,7 @@ new class extends Component
 
     public function canModifySlots(): bool
     {
-        return auth()->user()?->can(PermissionEnum::SCHEDULE_SLOT_MODIFY->value) ?? false;
+        return auth()->guard()->user()?->can(PermissionEnum::SCHEDULE_SLOT_MODIFY->value) ?? false;
     }
 
     public function mount(): void
@@ -72,7 +72,10 @@ new class extends Component
     #[Computed]
     public function semesterOptions(): array
     {
-        return collect(CurriculumEntry::SEMESTERS)->map(fn ($label, $value) => ['label' => $label, 'value' => $value])->values()->toArray();
+        return collect(CurriculumEntry::SEMESTERS)
+            ->map(fn ($label, $value) => ['label' => $label, 'value' => $value])
+            ->values()
+            ->toArray();
     }
 
     #[Computed]

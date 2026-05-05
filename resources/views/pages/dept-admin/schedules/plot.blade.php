@@ -166,7 +166,7 @@ new class extends Component {
 
     public function updated(string $property): void
     {
-        if (in_array($property, ['form.schedule_category_id', 'form.day', 'form.time_in', 'form.time_out', 'form.faculty_id', 'form.room_id', 'form.schedule_id'], true)) {
+        if (collect(['form.schedule_category_id', 'form.day', 'form.time_in', 'form.time_out', 'form.faculty_id', 'form.room_id', 'form.schedule_id'])->contains($property)) {
             $this->checkConflicts();
         }
     }
@@ -176,7 +176,7 @@ new class extends Component {
         $this->facultyConflict = false;
         $this->roomConflict = false;
 
-        if (!$this->form->day || !$this->form->time_in || !$this->form->time_out) {
+        if (blank($this->form->day) || blank($this->form->time_in) || blank($this->form->time_out)) {
             return;
         }
 

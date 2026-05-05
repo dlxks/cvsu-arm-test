@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Livewire\Tables\Admin;
 
 use App\Models\College;
@@ -83,7 +85,7 @@ final class FacultyProfilesTable extends PowerGridComponent
     {
         return PowerGrid::fields()
             ->add('id')
-            ->add('full_name', fn (FacultyProfile $model) => trim($model->first_name.' '.$model->last_name))
+            ->add('full_name', fn (FacultyProfile $model) => $model->full_name)
             ->add('email')
             ->add('academic_rank', fn (FacultyProfile $model) => $model->academic_rank ?: '-')
             ->add('college_id')

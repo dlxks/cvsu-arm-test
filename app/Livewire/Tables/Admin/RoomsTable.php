@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Livewire\Tables\Admin;
 
 use App\Enums\RoomStatusEnum;
@@ -160,7 +162,7 @@ final class RoomsTable extends PowerGridComponent
                 ->builder(fn (Builder $query, $value) => filled($value) ? $query->where('room_category_id', $value) : $query),
 
             Filter::select('status')
-                ->dataSource($this->enumOptions(Room::STATUSES))
+                ->dataSource(Room::statusFilterOptions())
                 ->optionValue('id')
                 ->optionLabel('name')
                 ->builder(fn (Builder $query, $value) => filled($value)
@@ -176,17 +178,6 @@ final class RoomsTable extends PowerGridComponent
                 ->optionLabel('name')
                 ->builder(fn (Builder $query, $value) => filled($value) ? $query->where('is_active', (int) $value) : $query),
         ];
-    }
-
-    protected function enumOptions(array $options): array
-    {
-        return collect($options)
-            ->map(fn (string $name, string $id) => [
-                'id' => $id,
-                'name' => $name,
-            ])
-            ->values()
-            ->all();
     }
 
     protected function roomCategoryOptions(): array
