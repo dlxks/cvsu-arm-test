@@ -66,7 +66,6 @@ new class extends Component {
     public function confirmSave(): void
     {
         $this->ensureCanManage('assignments.manage');
-        $this->validate();
 
         $this->dialog()->question('Save user assignments?', 'This will sync the selected roles and direct permissions for the chosen user.')->confirm('Yes, save', 'saveUserAssignments')->cancel('Cancel')->send();
     }
@@ -125,7 +124,7 @@ new class extends Component {
         @if ($selectedUserId)
             <div class="space-y-6 rounded-md bg-zinc-50 p-5 dark:bg-zinc-900/40">
                 <div>
-                    <x-select.styled wire:key="roles-select-{{ $selectedUserId }}" wire:model="userRoles" label="Roles"
+                    <x-select.styled wire:key="roles-select-{{ $selectedUserId }}" wire:model.live="userRoles" label="Roles"
                         placeholder="Select roles" multiple searchable :options="$rolesOptions"
                         select="label:label|value:value" />
 
@@ -145,7 +144,7 @@ new class extends Component {
                 <hr class="border-zinc-200 dark:border-zinc-700">
 
                 <div>
-                    <x-select.styled wire:key="permissions-select-{{ $selectedUserId }}" wire:model="userPermissions"
+                    <x-select.styled wire:key="permissions-select-{{ $selectedUserId }}" wire:model.live="userPermissions"
                         label="Direct Permissions" placeholder="Select direct permissions" multiple searchable
                         :options="$permissionsOptions" select="label:label|value:value" />
 

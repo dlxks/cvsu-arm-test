@@ -13,9 +13,9 @@
     </div>
 
     <div class="grid gap-4 md:grid-cols-2">
-        <x-select.styled label="Roles" wire:model="form.roles" :options="$roles" select="label:label|value:value"
+        <x-select.styled label="Roles" wire:model.live="form.roles" :options="$roles" select="label:label|value:value"
             multiple searchable required />
-        <x-select.styled label="Direct Permissions" wire:model="form.direct_permissions" :options="$permissions"
+        <x-select.styled label="Direct Permissions" wire:model.live="form.direct_permissions" :options="$permissions"
             select="label:label|value:value" multiple searchable />
     </div>
 
@@ -27,7 +27,7 @@
                     select="label:label|value:value" required />
                 <x-select.styled label="College" wire:model.live="form.college_id" :options="$colleges"
                     select="label:label|value:value" required />
-                <x-select.styled label="Department" wire:model="form.department_id" :options="$departments"
+                <x-select.styled label="Department" wire:model.live="form.department_id" :options="$departments"
                     select="label:label|value:value" :required="$form->requiresFacultyProfile()" />
             </div>
         </div>

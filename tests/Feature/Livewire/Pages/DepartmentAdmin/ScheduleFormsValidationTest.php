@@ -41,6 +41,100 @@ describe('department admin schedule forms', function () {
             ]);
     });
 
+    it('derives distinct year level options from the selected program curricula and clears stale selections', function () {
+        $user = actingUserWithPermissions([
+            'schedules.create',
+            'schedules.assign',
+        ], ['deptAdmin']);
+
+        $campus = Campus::factory()->create();
+        $college = College::factory()->forCampus($campus)->create();
+        $department = Department::factory()->forCollege($college)->create();
+
+        EmployeeProfile::factory()->forDepartment($department)->create([
+            'user_id' => $user->id,
+        ]);
+
+        $subjectCategory = SubjectCategory::factory()->create();
+
+        $programA = Program::factory()->create(['code' => 'BSIT']);
+        $programA->colleges()->attach($college->id);
+
+        $curriculumA1 = Curriculum::factory()->create([
+            'program_id' => $programA->id,
+            'year_implemented' => 2024,
+        ]);
+        $curriculumA2 = Curriculum::factory()->create([
+            'program_id' => $programA->id,
+            'year_implemented' => 2026,
+        ]);
+
+        $subjectA = Subject::factory()->create(['code' => 'IT111']);
+        $subjectB = Subject::factory()->create(['code' => 'IT121']);
+        $subjectC = Subject::factory()->create(['code' => 'IT211']);
+
+        CurriculumEntry::factory()->create([
+            'curriculum_id' => $curriculumA1->id,
+            'subject_id' => $subjectA->id,
+            'subject_category_id' => $subjectCategory->id,
+            'year_level' => 1,
+            'semester' => '1ST',
+        ]);
+
+        CurriculumEntry::factory()->create([
+            'curriculum_id' => $curriculumA2->id,
+            'subject_id' => $subjectB->id,
+            'subject_category_id' => $subjectCategory->id,
+            'year_level' => 1,
+            'semester' => '2ND',
+        ]);
+
+        CurriculumEntry::factory()->create([
+            'curriculum_id' => $curriculumA2->id,
+            'subject_id' => $subjectC->id,
+            'subject_category_id' => $subjectCategory->id,
+            'year_level' => 2,
+            'semester' => '1ST',
+        ]);
+
+        $programB = Program::factory()->create(['code' => 'BSCS']);
+        $programB->colleges()->attach($college->id);
+
+        $curriculumB = Curriculum::factory()->create([
+            'program_id' => $programB->id,
+            'year_implemented' => 2026,
+        ]);
+
+        $subjectD = Subject::factory()->create(['code' => 'CS311']);
+
+        CurriculumEntry::factory()->create([
+            'curriculum_id' => $curriculumB->id,
+            'subject_id' => $subjectD->id,
+            'subject_category_id' => $subjectCategory->id,
+            'year_level' => 3,
+            'semester' => '1ST',
+        ]);
+
+        $component = Livewire::actingAs($user)
+            ->test('pages::dept-admin.schedules.bulk-generate');
+
+        $component->set('form.program_id', $programA->id);
+
+        expect($component->instance()->yearLevelOptions())->toBe([
+            ['label' => 'Year 1', 'value' => 1],
+            ['label' => 'Year 2', 'value' => 2],
+        ]);
+
+        $component
+            ->set('form.year_level', 2)
+            ->set('form.program_id', $programB->id)
+            ->assertSet('form.year_level', null);
+
+        expect($component->instance()->yearLevelOptions())->toBe([
+            ['label' => 'Year 3', 'value' => 3],
+        ]);
+    });
+
     it('validates the custom section form through Livewire form fields', function () {
         $user = actingUserWithPermissions([
             'schedules.create',
